@@ -41,7 +41,9 @@ endif
     export MTK_COMBO_CHIP=CONNAC
     export WLAN_CHIP_ID=6765
     export MTK_ANDROID_WMT=y
-
+    # Remove debugging
+    export TARGET_BUILD_VARIANT=user
+    
     # Do build-in for Makefile checking
     # export CONFIG_WLAN_DRV_BUILD_IN=y
 
