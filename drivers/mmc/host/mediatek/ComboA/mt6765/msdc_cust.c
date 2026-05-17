@@ -1249,10 +1249,18 @@ int msdc_of_parse(struct platform_device *pdev, struct mmc_host *mmc)
 			host->id);
 
 	/* get cd_gpio and cd_level */
-	cd_gpio = of_get_named_gpio(np, "cd-gpios", 0);
-	if (of_property_read_u8(np, "cd_level", &host->hw->cd_level))
-		pr_notice("[msdc%d] cd_level isn't found in device tree\n",
-			host->id);
+cd_gpio = of_get_named_gpio(np, "cd-gpios", 0);
+
+if (!gpio_is_valid(cd_gpio)) {
+        pr_notice("[msdc%d] invalid or missing cd-gpios\n",
+                host->id);
+        host->hw->flags &= ~MSDC_CD_PIN_EN;
+} else {
+        if (of_property_read_u8(np, "cd_level",
+                &host->hw->cd_level))
+                pr_notice("[msdc%d] cd_level isn't found in DT\n",
+                        host->id);
+}
 #ifdef ODM_WT_EDIT
 // huangxiaotian@ODM_WT.BSP.Storage.sdcard, 2019/12/20, Modify sdcard
 	cd_ldo_gpio = of_get_named_gpio(np, "cd-ldo-gpio", 0);
