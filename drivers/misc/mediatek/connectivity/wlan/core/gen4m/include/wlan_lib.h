@@ -143,6 +143,12 @@
 /* Support Random P2P MAC */
 #define WIFI_FEATURE_P2P_RAND_MAC  (0x100000000L)
 
+#ifdef VENDOR_EDIT
+//Laixin@PSW.CN.WiFi.Basic.Custom.1130116, 2019/03/22
+/* Support DBDC */
+#define WIFI_FEATURE_DBDC               (0x10000000)
+#endif /* VENDOR_EDIT */
+
 /* note: WIFI_FEATURE_GSCAN be enabled just for ACTS test item: scanner */
 #define WIFI_HAL_FEATURE_SET ((WIFI_FEATURE_P2P) |\
 			      (WIFI_FEATURE_SOFT_AP) |\
@@ -207,7 +213,12 @@
 #define WLAN_CFG_KEY_LEN_MAX	32	/* include \x00  EOL */
 #define WLAN_CFG_VALUE_LEN_MAX	128	/* include \x00 EOL */
 #define WLAN_CFG_FLAG_SKIP_CB	BIT(0)
-#define WLAN_CFG_FILE_BUF_SIZE	2048
+//#ifdef OPLUS_BUG_STABILITY
+/* Fuchun.Liao@BSP.Kernel.Stability 2020/08/31 modify for memory out of bounds */
+//#define WLAN_CFG_FILE_BUF_SIZE	2048
+//#else
+#define WLAN_CFG_FILE_BUF_SIZE	3072
+//#endif
 
 #define WLAN_CFG_REC_ENTRY_NUM_MAX 200
 #define WLAN_CFG_REC_FLAG_BIT BIT(0)
@@ -1680,7 +1691,18 @@ uint8_t
 wlanGetChannelNumFromIndex(IN uint8_t ucIdx);
 
 void
-wlanSortChannel(IN struct ADAPTER *prAdapter);
+wlanSortChannel(IN struct ADAPTER *prAdapter,
+		IN enum ENUM_CHNL_SORT_POLICY ucSortType);
 
 uint32_t wlanSetForceRTS(IN struct ADAPTER *prAdapter,
 	IN u_int8_t fgEnForceRTS);
+
+
+u_int8_t wlanWfdEnabled(struct ADAPTER *prAdapter);
+
+#ifdef VENDOR_EDIT
+//Lei.Zhang@CONNECTIVITY.WIFI.HARDWARE.SAR.1785313, 2020/09/12
+//add hex project name compatible
+uint32_t getOplusRealProjectName(char *prjName, uint8_t len);
+#endif
+

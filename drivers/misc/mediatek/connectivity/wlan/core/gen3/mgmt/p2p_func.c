@@ -1116,9 +1116,27 @@ p2pFuncSwitchOPMode(IN P_ADAPTER_T prAdapter,
 			case OP_MODE_INFRASTRUCTURE:
 			case OP_MODE_ACCESS_POINT:
 				/* Change interface address. */
-				COPY_MAC_ADDR(prP2pBssInfo->aucOwnMacAddr, prAdapter->rWifiVar.aucInterfaceAddress);
-				COPY_MAC_ADDR(prP2pBssInfo->aucBSSID, prAdapter->rWifiVar.aucInterfaceAddress);
-
+				if ((prAdapter->prGlueInfo == NULL)
+					|| (prAdapter->prGlueInfo->prP2PInfo == NULL)
+					|| (prAdapter->prGlueInfo->prP2PInfo->prWdev == NULL)) {
+					DBGLOG(P2P, ERROR, " prGlueInfo || prP2PInfo || prWdev == NULLL\n");
+					break;
+				}
+				if (prAdapter->prGlueInfo->prP2PInfo->prWdev->iftype == NL80211_IFTYPE_AP) {
+					COPY_MAC_ADDR(prP2pBssInfo->aucOwnMacAddr,
+						prAdapter->rWifiVar.aucInterfaceAddress[1]);
+					COPY_MAC_ADDR(prP2pBssInfo->aucBSSID,
+						prAdapter->rWifiVar.aucInterfaceAddress[1]);
+					DBGLOG(INIT, INFO, "Swith Mode AP aucOwnMacAddr %pM\n",
+						prP2pBssInfo->aucOwnMacAddr);
+				} else {
+					COPY_MAC_ADDR(prP2pBssInfo->aucOwnMacAddr,
+						prAdapter->rWifiVar.aucInterfaceAddress[0]);
+					COPY_MAC_ADDR(prP2pBssInfo->aucBSSID,
+						prAdapter->rWifiVar.aucInterfaceAddress[0]);
+					DBGLOG(INIT, INFO, "Swith Mode STA aucOwnMacAddr %pM\n",
+						prP2pBssInfo->aucOwnMacAddr);
+				}
 				break;
 			case OP_MODE_P2P_DEVICE:
 				p2pChangeMediaState(prAdapter, prP2pBssInfo, PARAM_MEDIA_STATE_DISCONNECTED);

@@ -712,6 +712,9 @@ int mtk_cfg80211_scan(struct wiphy *wiphy,
 	struct _PARAM_SCAN_RANDOM_MAC_ADDR_T *prScanRandMacAddr = NULL;
 	UINT_32 num_ssid = 0, u4ValidIdx;
 
+	if (kalIsResetting())
+		return -EBUSY;
+
 	prGlueInfo = (P_GLUE_INFO_T) wiphy_priv(wiphy);
 	ASSERT(prGlueInfo);
 

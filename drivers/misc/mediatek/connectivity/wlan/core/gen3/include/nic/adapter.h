@@ -629,7 +629,7 @@ typedef struct _WIFI_VAR_T {
 	UINT_8 aucPermanentAddress[MAC_ADDR_LEN];
 	UINT_8 aucMacAddress[MAC_ADDR_LEN];
 	UINT_8 aucDeviceAddress[MAC_ADDR_LEN];
-	UINT_8 aucInterfaceAddress[MAC_ADDR_LEN];
+	UINT_8 aucInterfaceAddress[MAC_ADDR_NUM_STORE][MAC_ADDR_LEN];
 
 	UINT_8 ucAvailablePhyTypeSet;
 
@@ -789,6 +789,11 @@ typedef struct _WIFI_VAR_T {
 	struct RADIO_MEASUREMENT_REPORT_PARAMS rRmRepParams;
 
 	struct WMM_INFO rWmmInfo;
+#if ARP_MONITER_ENABLE
+	uint32_t uArpMonitorNumber;
+	uint32_t uArpMonitorRxPktNum;
+#endif /* ARP_MONITER_ENABLE */
+
 } WIFI_VAR_T, *P_WIFI_VAR_T;	/* end of _WIFI_VAR_T */
 
 /* cnm_timer module */
@@ -1077,6 +1082,10 @@ struct _ADAPTER_T {
 
 #if CFG_SUPPORT_PWR_LIMIT_COUNTRY
 	BOOLEAN fgIsPowerLimitTableValid;
+#endif
+
+#if CFG_SUPPORT_ANT_SWAP
+	BOOLEAN fgIsAntSwpSupport;
 #endif
 
 	/* Packet Forwarding Tracking */

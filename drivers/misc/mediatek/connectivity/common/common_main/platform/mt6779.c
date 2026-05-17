@@ -1123,7 +1123,7 @@ static INT32 consys_hw_vcn18_ctrl(MTK_WCN_BOOL enable)
 		/*1.AP power on VCN_3V3 LDO (with PMIC_WRAP API) VCN_3V3  */
 		/*default vcn33_1 SW mode*/
 		if (reg_VCN33_1_BT) {
-			regulator_set_voltage(reg_VCN33_1_BT, 3300000, 3300000);
+			regulator_set_voltage(reg_VCN33_1_BT, 3500000, 3500000);
 			if (regulator_enable(reg_VCN33_1_BT))
 				WMT_PLAT_PR_ERR("WMT do BT PMIC on fail!\n");
 		}

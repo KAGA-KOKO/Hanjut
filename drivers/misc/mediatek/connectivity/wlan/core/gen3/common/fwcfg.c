@@ -31,6 +31,24 @@ static char *strtok_r(char *s, const char *delim, char **last);
 ********************************************************************************
 */
 struct _FW_CFG __weak fwCfgArray[] = {
+    #ifdef VENDOR_EDIT
+    //Shimin.Jiang@PSW.CN.WiFi.Connect.roaming.1268996,2018/1/29
+    //Add for 1268996 roam in strong rssi
+    {"RoamingCustomization", "1"},
+    {"RoamingRCPIGoodValue", "0x50"},//-70db
+    {"RoamingRCPIPoorValue", "0x40"},//-78db
+    #endif/* VENDOR_EDIT */
+
+	#ifdef VENDOR_EDIT
+	//Ming.Liu@PSW.CN.WiFi.Network.dl_speed.1115135, 2017/09/30,
+	//add for: [ modify Cw/TxOp param to the same with msm8953 ]
+	{"CwMax", "3"},
+	{"CwMin", "3"},
+	{"AifsN", "2"},
+	{"TxOp", "520"},
+	{"WmmParamCfgEn", "1"},
+	{"Cert11gModeEnable", "0"},
+	#endif /* VENDOR_EDIT */
 };
 #ifdef CFG_SUPPORT_COEX_IOT_AP
 /*

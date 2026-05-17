@@ -4647,7 +4647,10 @@ static int std_get_name(struct net_device *prDev,
 		union iwreq_data *prData,
 		char *pcExtra)
 {
-	DBGLOG(INIT, INFO, " mtk std ioctl is called.\n");
+    //#ifdef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
+    //DBGLOG(INIT, INFO, " mtk std ioctl is called.\n");
+    //#endif /* ODM_WT_EDIT */
 	return wext_get_name(prDev, NULL, (char *)(&(prData->name)),
 				    sizeof(prData->name), NULL);
 }

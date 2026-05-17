@@ -193,6 +193,10 @@
 #define OID_IPC_WIFI_LOG_UI                             0xFFA0CC01
 #define OID_IPC_WIFI_LOG_LEVEL                          0xFFA0CC02
 
+#if CFG_SUPPORT_ANT_SWAP
+#define OID_CUSTOM_QUERY_ANT_SWAP_CAPABILITY		0xFFA0CD00
+#endif
+
 /* Define magic key of test mode (Don't change it for future compatibity) */
 #define PRIV_CMD_TEST_MAGIC_KEY                         2011
 #define PRIV_CMD_TEST_MAGIC_KEY_ICAP                         2013

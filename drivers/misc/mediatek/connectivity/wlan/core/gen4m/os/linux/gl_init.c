@@ -85,6 +85,7 @@
 #include "gl_rst.h"
 #endif
 #include "gl_vendor.h"
+#include <oppo/oppo_project.h>
 
 /*******************************************************************************
  *                              C O N S T A N T S
@@ -435,9 +436,7 @@ static struct cfg80211_ops mtk_wlan_ops = {
 #endif
 	.update_ft_ies = mtk_cfg80211_update_ft_ies,
 
-	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0))
-.external_auth = mtk_cfg80211_external_auth,
-#endif
+	.external_auth = mtk_cfg80211_external_auth,
 };
 #else /* CFG_ENABLE_UNIFY_WIPHY */
 static struct cfg80211_ops mtk_cfg_ops = {
@@ -515,7 +514,7 @@ static struct cfg80211_ops mtk_cfg_ops = {
 #endif
 	.update_ft_ies = mtk_cfg80211_update_ft_ies,
 
-	/* .external_auth = mtk_cfg80211_external_auth, */
+	.external_auth = mtk_cfg80211_external_auth,
 };
 #endif	/* CFG_ENABLE_UNIFY_WIPHY */
 
@@ -1954,11 +1953,26 @@ static int32_t wlanNetRegister(struct wireless_dev *prWdev)
 				wlanClearDevIdx(
 					gprWdev[u4Idx]->netdev);
 				i4DevIdx = -1;
+				break;
 			}
 		}
 
 		if (i4DevIdx != -1)
 			prGlueInfo->fgIsRegistered = TRUE;
+		else {
+			/* Unregister the registered netdev if one of netdev
+			 * registered fail
+			 */
+			for (u4Idx = 0; u4Idx < KAL_AIS_NUM; u4Idx++) {
+				if (!gprWdev[u4Idx] || !gprWdev[u4Idx]->netdev)
+					continue;
+				if (gprWdev[u4Idx]->netdev->reg_state !=
+						NETREG_REGISTERED)
+					continue;
+				wlanClearDevIdx(gprWdev[u4Idx]->netdev);
+				unregister_netdev(gprWdev[u4Idx]->netdev);
+			}
+		}
 	} while (FALSE);
 
 	return i4DevIdx;	/* success */
@@ -2933,9 +2947,10 @@ void wlanGetParseConfig(struct ADAPTER *prAdapter)
 	pucConfigBuf = (uint8_t *) kalMemAlloc(
 			       WLAN_CFG_FILE_BUF_SIZE, VIR_MEM_TYPE);
 	kalMemZero(pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE);
+
 	u4ConfigReadLen = 0;
 	if (pucConfigBuf) {
-		if (kalRequestFirmware("wifi.cfg", pucConfigBuf,
+        if (kalRequestFirmware("wifi.cfg", pucConfigBuf,
 			   WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
 			   prAdapter->prGlueInfo->prDev) == 0) {
 			/* ToDo:: Nothing */
@@ -2952,6 +2967,7 @@ void wlanGetParseConfig(struct ADAPTER *prAdapter)
 			   &u4ConfigReadLen) == 0) {
 			/* ToDo:: Nothing */
 		}
+
 
 		if (pucConfigBuf[0] != '\0' && u4ConfigReadLen > 0)
 			wlanCfgParse(prAdapter, pucConfigBuf, u4ConfigReadLen,
@@ -2979,13 +2995,36 @@ void wlanGetConfig(struct ADAPTER *prAdapter)
 	uint8_t *pucConfigBuf;
 	uint32_t u4ConfigReadLen;
 
+    #ifdef VENDOR_EDIT
+    //Jian.Wang@PSW.CN.WiFi.Basic.Custom.1653741, 2019/12/10,
+    //Add for distinguish wifi.cfg at runtime.
+    char u2WlanFwFilePath[100] = {"0"};
+    char realPrjName[16] = {"0"};
+    #endif /* VENDOR_EDIT */
 	wlanCfgInit(prAdapter, NULL, 0, 0);
 	pucConfigBuf = (uint8_t *) kalMemAlloc(
 			       WLAN_CFG_FILE_BUF_SIZE, VIR_MEM_TYPE);
 	kalMemZero(pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE);
+
+    #ifdef VENDOR_EDIT
+    //Jian.Wang@PSW.CN.WiFi.Basic.Custom.1653741, 2019/12/10,
+    //Add for distinguish wifi.cfg at runtime.
+    getOplusRealProjectName(realPrjName, 16);
+    snprintf(u2WlanFwFilePath, sizeof(u2WlanFwFilePath), "%s%s%s", "wifi_", realPrjName, ".cfg");
+    DBGLOG(INIT, INFO, "u4PrjName = [%s], u2WlanFwFilePath = [%s]\n", realPrjName, u2WlanFwFilePath);
+    #endif /* VENDOR_EDIT */
+
 	u4ConfigReadLen = 0;
 	if (pucConfigBuf) {
-		if (kalRequestFirmware("wifi.cfg", pucConfigBuf,
+        #ifdef VENDOR_EDIT
+        //Jian.Wang@PSW.CN.WiFi.Basic.Custom.1653741, 2019/12/10,
+        //Add for distinguish wifi.cfg at runtime.
+        if  (kalRequestFirmware(u2WlanFwFilePath, pucConfigBuf,
+                WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
+                prAdapter->prGlueInfo->prDev) == 0) {
+            /* ToDo:: Nothing */
+        #endif /* VENDOR_EDIT */
+        }else if (kalRequestFirmware("wifi.cfg", pucConfigBuf,
 			   WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
 			   prAdapter->prGlueInfo->prDev) == 0) {
 			/* ToDo:: Nothing */
@@ -3869,6 +3908,17 @@ int32_t wlanOnWhenProbeSuccess(struct GLUE_INFO *prGlueInfo,
 	wlanProbeSuccessForLowLatency(prAdapter);
 #endif
 
+#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
+	if (wlan_bat_volt == 3550) {
+		kalEnableTxPwrBackoffByBattVolt(prAdapter, TRUE);
+		kalSetTxPwrBackoffByBattVolt(prAdapter, TRUE);
+		fgIsTxPowerDecreased = TRUE;
+	} else if (wlan_bat_volt == 3650) {
+		kalEnableTxPwrBackoffByBattVolt(prAdapter, TRUE);
+		kalSetTxPwrBackoffByBattVolt(prAdapter, FALSE);
+		fgIsTxPowerDecreased = FALSE;
+	}
+#endif
 	return 0;
 }
 
@@ -4130,7 +4180,7 @@ static int32_t wlanOnAtReset(void)
 		wlanOnWhenProbeSuccess(prGlueInfo, prAdapter, TRUE);
 		DBGLOG(INIT, INFO, "reset success\n");
 
-		/* Send disconnect */
+                /* Send disconnect */
 		for (u4Idx = 0; u4Idx < KAL_AIS_NUM; u4Idx++) {
 			rStatus = kalIoctlByBssIdx(prGlueInfo,
 				wlanoidSetDisassociate,
@@ -4734,6 +4784,10 @@ static int initWlan(void)
 	kalFbNotifierReg((struct GLUE_INFO *) wiphy_priv(
 				 wlanGetWiphy()));
 
+#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
+	kalBatNotifierReg(prGlueInfo);
+#endif
+
 #ifdef CONFIG_MTK_CONNSYS_DEDICATED_LOG_PATH
 	wifi_fwlog_event_func_register(consys_log_event_notification);
 #endif
@@ -4766,6 +4820,10 @@ static void exitWlan(void)
 {
 	kalFbNotifierUnReg();
 	/* printk("remove %p\n", wlanRemove); */
+#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
+	kalBatNotifierUnReg();
+#endif
+
 #if CFG_CHIP_RESET_SUPPORT
 	glResetUninit();
 #endif

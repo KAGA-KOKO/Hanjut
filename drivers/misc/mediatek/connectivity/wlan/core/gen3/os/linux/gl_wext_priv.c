@@ -571,6 +571,15 @@ static WLAN_REQ_ENTRY arWlanOidReqTable[] = {
 	(PFN_OID_HANDLER_FUNC_REQ) wlanoidSetWifiLogLevel}
 	,
 
+#if CFG_SUPPORT_ANT_SWAP
+	{OID_CUSTOM_QUERY_ANT_SWAP_CAPABILITY,
+	 DISP_STRING("OID_CUSTOM_QUERY_ANT_SWAP_CAPABILITY"),
+	 TRUE, TRUE, ENUM_OID_DRIVER_CORE, sizeof(UINT_32),
+	 (PFN_OID_HANDLER_FUNC_REQ) wlanoidQueryAntSwapCapability,
+	 NULL}
+	,
+#endif
+
 };
 
 /*******************************************************************************
@@ -2472,7 +2481,7 @@ static int priv_driver_get_sw_ctrl(IN struct net_device *prNetDev, IN char *pcCo
 	PCHAR apcArgv[WLAN_CFG_ARGV_MAX] = {0};
 	INT_32 u4Ret = 0;
 
-	PARAM_CUSTOM_SW_CTRL_STRUCT_T rSwCtrlInfo = { 0, 0 };
+	PARAM_CUSTOM_SW_CTRL_STRUCT_T rSwCtrlInfo = { {0} };
 
 	ASSERT(prNetDev);
 	if (GLUE_CHK_PR2(prNetDev, pcCommand) == FALSE)

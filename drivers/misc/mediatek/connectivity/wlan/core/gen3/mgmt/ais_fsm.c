@@ -1489,8 +1489,17 @@ VOID aisFsmSteps(IN P_ADAPTER_T prAdapter, ENUM_AIS_STATE_T eNextState)
 			/* using default channel dwell time/timeout value */
 			prScanReqMsg->u2ProbeDelay = 0;
 			prScanReqMsg->u2TimeoutValue = 0;
+                        #ifndef VENDOR_EDIT
+			//Shimin.Jiang@PSW.CN.WiFi.Connect.Scan.1237232, 2018/1/29
+			//Modify for 1237232 make scan faster
+			/*
 			prScanReqMsg->u2ChannelDwellTime = 0;
 			prScanReqMsg->u2MinChannelDwellTime = 0;
+                        */
+			#else
+				prScanReqMsg->u2ChannelDwellTime = 60;
+				prScanReqMsg->u2MinChannelDwellTime = 40;
+			#endif /*VENDOR_EDIT*/
 			prScanReqMsg->ucChannelListNum = 0;
 			if (prAisFsmInfo->fgAdjChnlScanIssued) {
 				fgAdjChnlScanIssued = TRUE;
@@ -2398,7 +2407,15 @@ VOID aisFsmRunEventAbort(IN P_ADAPTER_T prAdapter, IN P_MSG_HDR_T prMsgHdr)
 	if (ucReasonOfDisconnect == DISCONNECT_REASON_CODE_ROAMING &&
 	    prAisFsmInfo->eCurrentState != AIS_STATE_DISCONNECTING) {
 
+//Shimin.Jiang@PSW.CN.WiFi.Connect.disconnect.1367902, 2018/5/4
+//Modify for 1367902 avoding disconnect
+#ifndef VENDOR_EDIT
 		cnmTimerStopTimer(prAdapter, &prAisFsmInfo->rSecModeChangeTimer);
+#else
+#if CFG_SUPPORT_DETECT_SECURITY_MODE_CHANGE
+		cnmTimerStopTimer(prAdapter, &prAisFsmInfo->rSecModeChangeTimer);
+#endif/*VENDOR_EDITOR*/
+#endif
 		if (prAisFsmInfo->eCurrentState == AIS_STATE_NORMAL_TR) {
 			/* 1. release channel */
 			aisFsmReleaseCh(prAdapter);
@@ -3810,7 +3827,15 @@ VOID aisFsmDisconnect(IN P_ADAPTER_T prAdapter, IN BOOLEAN fgDelayIndication)
 
 	prAisBssInfo = prAdapter->prAisBssInfo;
 
+//Shimin.Jiang@PSW.CN.WiFi.Connect.disconnect.1367902, 2018/5/4
+//Modify for 1367902 avoding disconnect
+#ifndef VENDOR_EDIT
 	cnmTimerStopTimer(prAdapter, &prAdapter->rWifiVar.rAisFsmInfo.rSecModeChangeTimer);
+#else
+#if CFG_SUPPORT_DETECT_SECURITY_MODE_CHANGE
+	cnmTimerStopTimer(prAdapter, &prAdapter->rWifiVar.rAisFsmInfo.rSecModeChangeTimer);
+#endif
+#endif /*VENDOR_EDIT*/
 	nicPmIndicateBssAbort(prAdapter, prAdapter->prAisBssInfo->ucBssIndex);
 
 #if CFG_SUPPORT_ADHOC

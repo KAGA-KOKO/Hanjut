@@ -4055,6 +4055,11 @@ WLAN_STATUS wlanQueryNicCapability(IN P_ADAPTER_T prAdapter)
 	prAdapter->u4FwFeatureFlag0 = prEventNicCapability->u4FeatureFlag0;
 	prAdapter->u4FwFeatureFlag1 = prEventNicCapability->u4FeatureFlag1;
 
+#if CFG_SUPPORT_ANT_SWAP
+	prAdapter->fgIsAntSwpSupport = prEventNicCapability->ucAntSwapEn;
+	DBGLOG(NIC, INFO, "prAdapter->fgIsAntSwpSupport = %u\n", prAdapter->fgIsAntSwpSupport);
+#endif
+
 	g_u2FwIDVersion = (prAdapter->rVerInfo.u2FwProductID << 16) | (prAdapter->rVerInfo.u2FwOwnVersion);
 #if CFG_ENABLE_CAL_LOG
 	DBGLOG(NIC, LOUD, " RF CAL FAIL  = (%d),BB CAL FAIL  = (%d)\n",
@@ -5927,6 +5932,12 @@ VOID wlanInitFeatureOption(IN P_ADAPTER_T prAdapter)
 			prAdapter, "TrafficThreshold",
 			TRAFFIC_RHRESHOLD);
 #endif
+#if ARP_MONITER_ENABLE
+	prWifiVar->uArpMonitorNumber = (uint32_t) wlanCfgGetUint32(
+		prAdapter, "ArpMonitorNumber", 20);
+	prWifiVar->uArpMonitorRxPktNum = (uint32_t) wlanCfgGetUint32(
+		prAdapter, "ArpMonitorRxPktNum", 0);
+#endif /* ARP_MONITER_ENABLE */
 
 #ifdef CFG_SUPPORT_COEX_IOT_AP
 	prWifiVar->ucEnCoexIotAP = (UINT_8) wlanCfgGetUint32(prAdapter, "EnCoexIotAP", 1);
@@ -6049,7 +6060,7 @@ VOID wlanCfgSetDebugLevel(IN P_ADAPTER_T prAdapter)
 	CHAR *pcDupValue;
 	CHAR *pcPtr = NULL;
 
-	UINT_32 au4Values[2] = {0};
+	UINT_32 au4Values[2];
 	UINT_32 u4TokenCount = 0;
 	UINT_32 u4DbgIdx = 0;
 	UINT_32 u4DbgMask = 0;

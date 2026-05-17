@@ -1721,6 +1721,10 @@ struct PARAM_GET_LINK_QUALITY_INFO {
 ********************************************************************************
 */
 
+WLAN_STATUS
+wlanoidQueryAntSwapCapability(IN P_ADAPTER_T prAdapter,
+		IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen);
+
 /*******************************************************************************
 *                   F U N C T I O N   D E C L A R A T I O N S
 ********************************************************************************

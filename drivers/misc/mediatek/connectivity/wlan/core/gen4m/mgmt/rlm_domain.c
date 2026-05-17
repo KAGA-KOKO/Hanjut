@@ -70,6 +70,7 @@
  */
 #include "precomp.h"
 #include "rlm_txpwr_init.h"
+#include <oppo/oppo_project.h>
 
 /*******************************************************************************
  *                              C O N S T A N T S
@@ -100,6 +101,12 @@ char *g_paryOpLabel[] = {
 	"power offset"
 };
 
+//#ifdef ODM_WT_EDIT
+//Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID, 2020/01/16, Add for limit wifi power for FCC.
+static uint16_t g_country_cfg[40];
+static uint32_t  g_countrycount;
+//#endif /* ODM_WT_EDIT */
+
 /*******************************************************************************
  *                             D A T A   T Y P E S
  *******************************************************************************
@@ -128,6 +135,9 @@ char *g_rTxPowerCtrlDefaultSetting[] = {
 
 /* Define mapping tables between country code and its channel set
  */
+#ifndef VENDOR_EDIT
+//Yuanliu.Tang@PSW.CN.WiFi.Basic.Custom.1067549, 2018/10/12,
+//Modify for set WiFi band over the world
 static const uint16_t g_u2CountryGroup0[] = { COUNTRY_CODE_JP };
 
 static const uint16_t g_u2CountryGroup1[] = {
@@ -147,10 +157,10 @@ static const uint16_t g_u2CountryGroup2[] = {
 static const uint16_t g_u2CountryGroup3[] = {
 	COUNTRY_CODE_AR, COUNTRY_CODE_BR, COUNTRY_CODE_HK, COUNTRY_CODE_OM,
 	COUNTRY_CODE_PH, COUNTRY_CODE_SA, COUNTRY_CODE_SG, COUNTRY_CODE_ZA,
-	COUNTRY_CODE_VN, COUNTRY_CODE_KR, COUNTRY_CODE_DO, COUNTRY_CODE_FK,
+	COUNTRY_CODE_VN, COUNTRY_CODE_BD, COUNTRY_CODE_DO, COUNTRY_CODE_FK,
 	COUNTRY_CODE_KZ, COUNTRY_CODE_MZ, COUNTRY_CODE_NA, COUNTRY_CODE_LC,
 	COUNTRY_CODE_VC, COUNTRY_CODE_UA, COUNTRY_CODE_UZ, COUNTRY_CODE_ZW,
-	COUNTRY_CODE_MP
+	COUNTRY_CODE_MP, COUNTRY_CODE_KR
 };
 
 static const uint16_t g_u2CountryGroup4[] = {
@@ -206,7 +216,7 @@ static const uint16_t g_u2CountryGroup13[] = { COUNTRY_CODE_NG };
 static const uint16_t g_u2CountryGroup14[] = {
 	COUNTRY_CODE_PK, COUNTRY_CODE_QA, COUNTRY_CODE_BF, COUNTRY_CODE_GY,
 	COUNTRY_CODE_HT, COUNTRY_CODE_JM, COUNTRY_CODE_MO, COUNTRY_CODE_MW,
-	COUNTRY_CODE_RW, COUNTRY_CODE_KN, COUNTRY_CODE_TZ, COUNTRY_CODE_BD
+	COUNTRY_CODE_RW, COUNTRY_CODE_KN, COUNTRY_CODE_TZ
 };
 
 static const uint16_t g_u2CountryGroup15[] = { COUNTRY_CODE_ID };
@@ -244,6 +254,139 @@ static const uint16_t g_u2CountryGroup20[] = {
 	COUNTRY_CODE_NF, COUNTRY_CODE_PS, COUNTRY_CODE_PN, COUNTRY_CODE_PM,
 	COUNTRY_CODE_SS, COUNTRY_CODE_SD, COUNTRY_CODE_SY
 };
+#else /* VENDOR_EDIT */
+static const uint16_t g_u2CountryGroup0[] = { COUNTRY_CODE_JP };
+
+static const uint16_t g_u2CountryGroup1[] = {
+	COUNTRY_CODE_AS, COUNTRY_CODE_AI, COUNTRY_CODE_BM, COUNTRY_CODE_KY,
+	COUNTRY_CODE_GU, COUNTRY_CODE_FM, COUNTRY_CODE_PR, COUNTRY_CODE_VI,
+	COUNTRY_CODE_AZ, COUNTRY_CODE_BW, COUNTRY_CODE_CX,
+	COUNTRY_CODE_CO, COUNTRY_CODE_CR, COUNTRY_CODE_GD, COUNTRY_CODE_GT,
+	COUNTRY_CODE_KI, COUNTRY_CODE_LB, COUNTRY_CODE_LR, COUNTRY_CODE_MN,
+	COUNTRY_CODE_AN, COUNTRY_CODE_NI, COUNTRY_CODE_PW, COUNTRY_CODE_WS,
+	COUNTRY_CODE_TT
+};
+
+static const uint16_t g_u2CountryGroup2[] = {
+	COUNTRY_CODE_AW, COUNTRY_CODE_LA, COUNTRY_CODE_UG
+};
+
+static const uint16_t g_u2CountryGroup3[] = {
+	COUNTRY_CODE_AR, COUNTRY_CODE_HK, COUNTRY_CODE_OM,
+	COUNTRY_CODE_PH, COUNTRY_CODE_SA, COUNTRY_CODE_SG, COUNTRY_CODE_ZA,
+	COUNTRY_CODE_VN, COUNTRY_CODE_DO, COUNTRY_CODE_FK, COUNTRY_CODE_LK,
+	COUNTRY_CODE_KZ, COUNTRY_CODE_MZ, COUNTRY_CODE_NA, COUNTRY_CODE_LC,
+	COUNTRY_CODE_VC, COUNTRY_CODE_UA, COUNTRY_CODE_UZ, COUNTRY_CODE_ZW,
+	COUNTRY_CODE_MP, COUNTRY_CODE_KR, COUNTRY_CODE_AE,
+	COUNTRY_CODE_KE, COUNTRY_CODE_TH,
+	COUNTRY_CODE_BD, COUNTRY_CODE_IR, COUNTRY_CODE_KH,
+	COUNTRY_CODE_ES, COUNTRY_CODE_IT, COUNTRY_CODE_FR, COUNTRY_CODE_NL,
+	COUNTRY_CODE_PL, COUNTRY_CODE_BE, COUNTRY_CODE_GB, COUNTRY_CODE_TR,
+	COUNTRY_CODE_IE, COUNTRY_CODE_EE, COUNTRY_CODE_BG, COUNTRY_CODE_RO,
+	COUNTRY_CODE_CH, COUNTRY_CODE_DE, COUNTRY_CODE_NZ, COUNTRY_CODE_IN
+};
+
+static const uint16_t g_u2CountryGroup4[] = {
+	COUNTRY_CODE_AT, COUNTRY_CODE_HR,
+	COUNTRY_CODE_CZ, COUNTRY_CODE_DK, COUNTRY_CODE_FI,
+	COUNTRY_CODE_GR, COUNTRY_CODE_HU, COUNTRY_CODE_IS,
+	COUNTRY_CODE_LU, COUNTRY_CODE_NO,
+	COUNTRY_CODE_PT, COUNTRY_CODE_SK,
+	COUNTRY_CODE_SI, COUNTRY_CODE_SE,
+	COUNTRY_CODE_AL, COUNTRY_CODE_AD, COUNTRY_CODE_BY,
+	COUNTRY_CODE_BA, COUNTRY_CODE_VG, COUNTRY_CODE_CV, COUNTRY_CODE_CY,
+	COUNTRY_CODE_ET, COUNTRY_CODE_GF, COUNTRY_CODE_PF,
+	COUNTRY_CODE_TF, COUNTRY_CODE_GE, COUNTRY_CODE_GH,
+	COUNTRY_CODE_GP, COUNTRY_CODE_IQ, COUNTRY_CODE_LV, COUNTRY_CODE_MM,
+	COUNTRY_CODE_LS, COUNTRY_CODE_LI, COUNTRY_CODE_LT, COUNTRY_CODE_MK,
+	COUNTRY_CODE_MT, COUNTRY_CODE_MQ, COUNTRY_CODE_MR, COUNTRY_CODE_MU,
+	COUNTRY_CODE_YT, COUNTRY_CODE_MD, COUNTRY_CODE_MC, COUNTRY_CODE_ME,
+	COUNTRY_CODE_MS, COUNTRY_CODE_RE, COUNTRY_CODE_MF, COUNTRY_CODE_SM,
+	COUNTRY_CODE_SN, COUNTRY_CODE_RS, COUNTRY_CODE_TC,
+	COUNTRY_CODE_VA, COUNTRY_CODE_EU
+};
+
+static const uint16_t g_u2CountryGroup5[] = {
+	COUNTRY_CODE_AU, COUNTRY_CODE_EC, COUNTRY_CODE_PY,
+	COUNTRY_CODE_PE, COUNTRY_CODE_UY
+};
+
+static const uint16_t g_u2CountryGroup6[] = { COUNTRY_CODE_RU };
+
+static const uint16_t g_u2CountryGroup7[] = {
+	COUNTRY_CODE_AG,
+	COUNTRY_CODE_BS, COUNTRY_CODE_BH, COUNTRY_CODE_BB, COUNTRY_CODE_BN,
+	COUNTRY_CODE_MV, COUNTRY_CODE_PA, COUNTRY_CODE_ZM, COUNTRY_CODE_CN,
+	COUNTRY_CODE_NP
+};
+
+static const uint16_t g_u2CountryGroup8[] = { COUNTRY_CODE_MY };
+
+static const uint16_t g_u2CountryGroup9[] = { COUNTRY_CODE_ID };
+
+static const uint16_t g_u2CountryGroup10[] = {
+	COUNTRY_CODE_IL, COUNTRY_CODE_AM, COUNTRY_CODE_KW, COUNTRY_CODE_MA,
+	COUNTRY_CODE_NE, COUNTRY_CODE_TN, COUNTRY_CODE_EG
+};
+
+static const uint16_t g_u2CountryGroup11[] = {
+	COUNTRY_CODE_JO, COUNTRY_CODE_PG
+};
+
+static const uint16_t g_u2CountryGroup12[] = { COUNTRY_CODE_AF };
+
+static const uint16_t g_u2CountryGroup13[] = { COUNTRY_CODE_NG };
+
+static const uint16_t g_u2CountryGroup14[] = {
+	COUNTRY_CODE_QA, COUNTRY_CODE_BF, COUNTRY_CODE_GY, COUNTRY_CODE_PK,
+	COUNTRY_CODE_HT, COUNTRY_CODE_JM, COUNTRY_CODE_MO, COUNTRY_CODE_MW,
+	COUNTRY_CODE_RW, COUNTRY_CODE_KN, COUNTRY_CODE_TZ
+};
+
+static const uint16_t g_u2CountryGroup15[] = { };
+
+static const uint16_t g_u2CountryGroup16[] = {
+	COUNTRY_CODE_AO, COUNTRY_CODE_BZ, COUNTRY_CODE_BJ, COUNTRY_CODE_BT,
+	COUNTRY_CODE_BO, COUNTRY_CODE_BI, COUNTRY_CODE_CM, COUNTRY_CODE_CF,
+	COUNTRY_CODE_TD, COUNTRY_CODE_KM, COUNTRY_CODE_CD, COUNTRY_CODE_CG,
+	COUNTRY_CODE_CI, COUNTRY_CODE_DJ, COUNTRY_CODE_GQ, COUNTRY_CODE_ER,
+	COUNTRY_CODE_FJ, COUNTRY_CODE_GA, COUNTRY_CODE_GM, COUNTRY_CODE_GN,
+	COUNTRY_CODE_GW, COUNTRY_CODE_RKS, COUNTRY_CODE_KG, COUNTRY_CODE_LY,
+	COUNTRY_CODE_MG, COUNTRY_CODE_ML, COUNTRY_CODE_NR, COUNTRY_CODE_NC,
+	COUNTRY_CODE_ST, COUNTRY_CODE_SC, COUNTRY_CODE_SL, COUNTRY_CODE_SB,
+	COUNTRY_CODE_SO, COUNTRY_CODE_SR, COUNTRY_CODE_SZ, COUNTRY_CODE_TJ,
+	COUNTRY_CODE_TG, COUNTRY_CODE_TO, COUNTRY_CODE_TM, COUNTRY_CODE_TV,
+	COUNTRY_CODE_VU, COUNTRY_CODE_YE
+};
+
+static const uint16_t g_u2CountryGroup17[] = {
+	COUNTRY_CODE_CA, COUNTRY_CODE_US
+};
+
+static const uint16_t g_u2CountryGroup18[] = {
+	COUNTRY_CODE_DM, COUNTRY_CODE_SV, COUNTRY_CODE_HN, COUNTRY_CODE_MX
+};
+
+static const uint16_t g_u2CountryGroup19[] = {
+	COUNTRY_CODE_VE,COUNTRY_CODE_CL
+};
+
+static const uint16_t g_u2CountryGroup20[] = {
+	COUNTRY_CODE_CK, COUNTRY_CODE_CU, COUNTRY_CODE_TL, COUNTRY_CODE_FO,
+	COUNTRY_CODE_GI, COUNTRY_CODE_GG, COUNTRY_CODE_IM,
+	COUNTRY_CODE_JE, COUNTRY_CODE_KP, COUNTRY_CODE_MH, COUNTRY_CODE_NU,
+	COUNTRY_CODE_NF, COUNTRY_CODE_PS, COUNTRY_CODE_PN, COUNTRY_CODE_PM,
+	COUNTRY_CODE_SS, COUNTRY_CODE_SD, COUNTRY_CODE_SY
+};
+
+static const uint16_t g_u2CountryGroup21[] = {
+	COUNTRY_CODE_DZ
+};
+
+static const uint16_t g_u2CountryGroup22[] = {
+	COUNTRY_CODE_TW,COUNTRY_CODE_BR
+};
+#endif /* VENDOR_EDIT */
 
 #if (CFG_SUPPORT_SINGLE_SKU == 1)
 struct mtk_regd_control g_mtk_regd_control = {
@@ -275,16 +418,15 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 		(uint16_t *) g_u2CountryGroup0, sizeof(g_u2CountryGroup0) / 2,
 		{
 			{81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
-			,			/* CH_SET_2G4_1_13 */
+						/* CH_SET_2G4_1_13 */
 
-			{82, BAND_2G4, CHNL_SPAN_5, 14, 1, FALSE}
 			,			/* CH_SET_2G4_14_14 */
 			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
-			,			/* CH_SET_UNII_WW_100_140 */
+			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
+			,			/* CH_SET_UNII_WW_100_144 */
 			{125, BAND_NULL, 0, 0, 0, FALSE}
 				/* CH_SET_UNII_UPPER_NA */
 		}
@@ -300,8 +442,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
-			,			/* CH_SET_UNII_WW_100_144 */
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
+			,			/* CH_SET_UNII_WW_100_140 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -318,8 +460,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
-			,			/* CH_SET_UNII_WW_100_144 */
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
+			,			/* CH_SET_UNII_WW_100_140 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 4, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_161 */
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -586,8 +728,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
-			,			/* CH_SET_UNII_WW_100_144 */
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
+			,			/* CH_SET_UNII_WW_100_140 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 					/* CH_SET_UNII_UPPER_149_165 */
 		}
@@ -620,8 +762,8 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_NULL, 0, 0, 0, FALSE}
-			,			/* CH_SET_UNII_WW_NA */
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
+			,			/* CH_SET_UNII_WW_100_140 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
 			{0, BAND_NULL, 0, 0, 0, FALSE}
@@ -646,6 +788,46 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 	}
 	,
 	{
+		 (uint16_t *) g_u2CountryGroup21, sizeof(g_u2CountryGroup21) / 2,
+		 {
+			  {81, BAND_2G4, CHNL_SPAN_5, 1, 13, FALSE}
+			  ,			/* CH_SET_2G4_1_13 */
+
+			  {115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
+			  ,			/* CH_SET_UNII_LOW_36_48 */
+			  {118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
+			  ,			/* CH_SET_UNII_MID_52_64 */
+			  {121, BAND_5G, CHNL_SPAN_20, 100, 9, TRUE}
+			  ,			/* CH_SET_UNII_WW_100_132 */
+			  {125, BAND_NULL, 0, 0, 0, FALSE}
+			  ,			/* CH_SET_UNII_UPPER_NA */
+			  {0, BAND_NULL, 0, 0, 0, FALSE}
+		 }
+	}
+	,
+#ifdef VENDOR_EDIT
+	//Laixin@PSW.CN.WiFi.Basic.Custom.1067549, 2019/04/02,
+	//Add for: disable channel 12, 13 in Taiwan province
+	{
+		(uint16_t *) g_u2CountryGroup22, sizeof(g_u2CountryGroup22) / 2,
+		{
+			{81, BAND_2G4, CHNL_SPAN_5, 1, 11, FALSE}
+			,			/* CH_SET_2G4_1_11 */
+
+			{115, BAND_5G, CHNL_SPAN_20, 36, 4, FALSE}
+			,			/* CH_SET_UNII_LOW_36_48 */
+			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
+			,			/* CH_SET_UNII_MID_52_64 */
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
+			,			/* CH_SET_UNII_WW_100_140 */
+			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
+			,			/* CH_SET_UNII_UPPER_149_165 */
+			{0, BAND_NULL, 0, 0, 0, FALSE}
+		}
+	}
+	,
+#endif /* VENDOR_EDIT */
+	{
 		/* Note: Default group if no matched country code */
 		NULL, 0,
 		{
@@ -655,7 +837,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains[] = {
 			,			/* CH_SET_UNII_LOW_36_48 */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
 			,			/* CH_SET_UNII_WW_100_144 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 5, FALSE}
 			,			/* CH_SET_UNII_UPPER_149_165 */
@@ -703,7 +885,7 @@ struct DOMAIN_INFO_ENTRY arSupportedRegDomains_Passive[] = {
 			,			/* CH_SET_UNII_LOW_NA */
 			{118, BAND_5G, CHNL_SPAN_20, 52, 4, TRUE}
 			,			/* CH_SET_UNII_MID_52_64 */
-			{121, BAND_5G, CHNL_SPAN_20, 100, 12, TRUE}
+			{121, BAND_5G, CHNL_SPAN_20, 100, 11, TRUE}
 			,			/* CH_SET_UNII_WW_100_144 */
 			{125, BAND_5G, CHNL_SPAN_20, 149, 0, FALSE}
 			,			/* CH_SET_UNII_UPPER_NA */
@@ -725,6 +907,23 @@ struct SUBBAND_CHANNEL g_rRlmSubBand[] = {
 				/* ch149,151,153,....,165 */
 };
 
+#ifdef VENDOR_EDIT
+//Lei.Zhang@PSW.CN.WiFi.Basic.Hardware.1065227, 2020/07/17,
+//Add for distinguish country power limit at runtime.
+struct oplus_country_pwr_limit {
+    uint16_t project;
+    uint16_t tableSize;
+    struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION *pwrLimitTable;
+};
+
+struct oplus_country_pwr_limit g_oplusCountryPwrLimit[] = {
+    {20361, sizeof(g_rRlmPowerLimitConfiguration_20361)/sizeof(g_rRlmPowerLimitConfiguration_20361[0]), g_rRlmPowerLimitConfiguration_20361},
+    {20362, sizeof(g_rRlmPowerLimitConfiguration_20361)/sizeof(g_rRlmPowerLimitConfiguration_20361[0]), g_rRlmPowerLimitConfiguration_20361},
+    {20363, sizeof(g_rRlmPowerLimitConfiguration_20361)/sizeof(g_rRlmPowerLimitConfiguration_20361[0]), g_rRlmPowerLimitConfiguration_20361},
+    {20364, sizeof(g_rRlmPowerLimitConfiguration_20361)/sizeof(g_rRlmPowerLimitConfiguration_20361[0]), g_rRlmPowerLimitConfiguration_20361},
+    {20365, sizeof(g_rRlmPowerLimitConfiguration_20361)/sizeof(g_rRlmPowerLimitConfiguration_20361[0]), g_rRlmPowerLimitConfiguration_20361},
+};
+#endif
 /*******************************************************************************
  *                           P R I V A T E   D A T A
  *******************************************************************************
@@ -1868,25 +2067,39 @@ rlmDomainCheckPowerLimitValid(struct ADAPTER *prAdapter,
 /*----------------------------------------------------------------------------*/
 void rlmDomainCheckCountryPowerLimitTable(struct ADAPTER *prAdapter)
 {
-#define PwrLmtConf g_rRlmPowerLimitConfiguration
-	uint8_t i, j;
+
+	uint16_t i, j;
 	uint16_t u2CountryCodeTable, u2CountryCodeCheck;
 	u_int8_t fgChannelValid = FALSE;
 	u_int8_t fgPowerLimitValid = FALSE;
 	u_int8_t fgEntryRepetetion = FALSE;
 	u_int8_t fgTableValid = TRUE;
+        struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION *PwrLmtConf = g_rRlmPowerLimitConfiguration;
+        uint16_t ucPwrLmitConfSize = (uint8_t)(sizeof(g_rRlmPowerLimitConfiguration) /
+                 sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION));
 
+        #ifdef VENDOR_EDIT
+        //Lei.Zhang@PSW.CN.WiFi.Basic.Hardware.1065227, 2020/07/17,
+        //Add for distinguish country power limit at runtime.
+        int u4PrjName = get_project();
+
+        for (i = 0; i < sizeof(g_oplusCountryPwrLimit)/sizeof(g_oplusCountryPwrLimit[0]); i++) {
+            if (u4PrjName == g_oplusCountryPwrLimit[i].project) {
+                 PwrLmtConf = g_oplusCountryPwrLimit[i].pwrLimitTable;
+                 ucPwrLmitConfSize = g_oplusCountryPwrLimit[i].tableSize;
+
+                 break;
+            }
+        }
+        #endif
 	/*1.Configuration Table Check */
-	for (i = 0; i < sizeof(PwrLmtConf) /
-	     sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION); i++) {
+	for (i = 0; i < ucPwrLmitConfSize; i++) {
 		/*Table Country Code */
 		WLAN_GET_FIELD_BE16(&PwrLmtConf[i].aucCountryCode[0],
 				    &u2CountryCodeTable);
 
 		/*<1>Repetition Entry Check */
-		for (j = i + 1; j < sizeof(PwrLmtConf) /
-		     sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
-		     j++) {
+		for (j = i + 1; j < ucPwrLmitConfSize;j++) {
 
 			WLAN_GET_FIELD_BE16(&PwrLmtConf[j].aucCountryCode[0],
 					    &u2CountryCodeCheck);
@@ -2151,17 +2364,33 @@ rlmDomainBuildCmdByDefaultTable(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT
 void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 			struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd)
 {
-#define PwrLmtConf g_rRlmPowerLimitConfiguration
-	uint8_t i, k;
+
+	uint16_t i, k;
 	uint16_t u2CountryCodeTable = COUNTRY_CODE_NULL;
 	struct CMD_CHANNEL_POWER_LIMIT *prCmdPwrLimit;
 	u_int8_t fgChannelValid;
 
+        uint16_t ucPwrLmitConfSize = (uint8_t)(sizeof(g_rRlmPowerLimitConfiguration) /
+		sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION));
+        struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION *PwrLmtConf = g_rRlmPowerLimitConfiguration;
+
+        #ifdef VENDOR_EDIT
+        //Lei.Zhang@PSW.CN.WiFi.Basic.Hardware.1065227, 2020/07/17,
+        //Add for distinguish country power limit at runtime.
+        int u4PrjName = get_project();
+
+        for (i = 0; i < sizeof(g_oplusCountryPwrLimit)/sizeof(g_oplusCountryPwrLimit[0]); i++) {
+            if (u4PrjName == g_oplusCountryPwrLimit[i].project) {
+                 PwrLmtConf = g_oplusCountryPwrLimit[i].pwrLimitTable;
+                 ucPwrLmitConfSize = g_oplusCountryPwrLimit[i].tableSize;
+
+                 break;
+            }
+        }
+        #endif
 	/*Build power limit cmd by configuration table information */
 
-	for (i = 0; i < sizeof(PwrLmtConf) /
-			sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
-	     i++) {
+	for (i = 0; i < ucPwrLmitConfSize;i++) {
 
 		WLAN_GET_FIELD_BE16(&PwrLmtConf[i].aucCountryCode[0],
 				    &u2CountryCodeTable);
@@ -2313,7 +2542,7 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 			}
 		}
 	}
-#undef PwrLmtConf
+
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2543,6 +2772,10 @@ uint32_t txPwrApplyOneSetting(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd,
 	uint8_t i, j, channel, channel2, channel3;
 	u_int8_t fgDoArbitrator;
 
+    //#ifdef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID, 2020/01/16, Add for limit wifi power for FCC.
+    uint32_t country_index = 0;
+    //#endif /* ODM_WT_EDIT */
 	prCmdPwrLimit = &prCmd->rChannelPowerLimit[0];
 	for (i = 0; i < prCmd->ucNum; i++) {
 		channel = prCmdPwrLimit->ucCentralCh;
@@ -2611,6 +2844,13 @@ uint32_t txPwrApplyOneSetting(struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd,
 					break;
 				}
 			}
+            //#ifdef ODM_WT_EDIT
+            //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID, 2020/01/16, Add for limit wifi power for FCC.
+            for (country_index = 0; country_index <= g_countrycount; country_index++) {
+                if (g_country_cfg[country_index] == prCmd->u2CountryCode)
+                    prCurElement->u2CountryCode = g_country_cfg[country_index];
+            }
+            //#endif /* ODM_WT_EDIT */
 			if (prCurElement->u2CountryCode != 0 &&
 				prCurElement->u2CountryCode !=
 				prCmd->u2CountryCode)
@@ -2686,6 +2926,10 @@ struct TX_PWR_CTRL_ELEMENT *txPwrCtrlStringToStruct(char *pcContent,
 	uint8_t value, value2, count = 0;
 	uint8_t ucAppliedWay, ucOperation = 0;
 	uint8_t ucCommaCount;
+    //#ifdef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID, 2020/01/16, Add for limit wifi power for FCC.
+    uint32_t copysize_index = 0, country_index = 0;
+    //#endif /* ODM_WT_EDIT */
 
 	if (!pcContent) {
 		DBGLOG(RLM, ERROR, "pcContent is null\n");
@@ -2762,6 +3006,28 @@ struct TX_PWR_CTRL_ELEMENT *txPwrCtrlStringToStruct(char *pcContent,
 				(((uint16_t) pcContTmp[1]));
 
 			DBGLOG(RLM, TRACE, "%x\n", u2countryCode);
+            //#ifdef ODM_WT_EDIT
+            //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID, 2020/01/16, Add for limit wifi power for FCC.
+            if (u2countryCode == 13104) {
+                pcContOld = pcContCur;
+                pcContTmp = txPwrGetString(&pcContCur, ";");
+                DBGLOG(RLM, TRACE, "parse pcContTmp error: %s\n",
+                pcContTmp);
+                copySize2 = kalStrLen(pcContTmp);
+                DBGLOG(RLM, TRACE, "parse copySize2 error: %d\n",
+                copySize2);
+                for (country_index = 0; country_index < copySize2;
+                    country_index++) {
+                    g_country_cfg[country_index] =
+                        (((uint16_t) pcContTmp[copysize_index]) << 8) |
+                         (((uint16_t) pcContTmp[copysize_index+1]));
+                            copysize_index = copysize_index+3;
+                            g_countrycount = country_index;
+                            if (copysize_index > (copySize2 + 2))
+                                break;
+                }
+            }
+            //#endif /* ODM_WT_EDIT */
 		} else
 			DBGLOG(RLM, WARN, "parse country code error: %s",
 					pcContTmp);
@@ -3464,20 +3730,38 @@ void txPwrCtrlCfgFileToList(struct ADAPTER *prAdapter)
 {
 	uint8_t *pucConfigBuf;
 	uint32_t u4ConfigReadLen = 0;
+    #ifdef VENDOR_EDIT
+    //Lei.Zhang@CONNECTIVITY.WIFI.HARDWARE.SAR.1785313, 2020/09/12
+    //add hex project name compatible
+    char realPrjName[16] = {"0"};
+    #else
+	//int u4PrjName = get_project();
+    #endif
+	char u2TxPowerPath[100] = {"0"};
+
+    #ifdef VENDOR_EDIT
+    //Lei.Zhang@CONNECTIVITY.WIFI.HARDWARE.SAR.1785313, 2020/09/12
+    //add hex project name compatible
+    getOplusRealProjectName(realPrjName, sizeof(realPrjName));
+    snprintf(u2TxPowerPath, sizeof(u2TxPowerPath), "%s/%s%s%s", "/vendor/firmware", "txpowerctrl_", realPrjName, ".cfg");
+    #else
+	//snprintf(u2TxPowerPath, sizeof(u2TxPowerPath), "%s/%s%d%s", "/vendor/firmware", "txpowerctrl_", u4PrjName, ".cfg");
+    #endif
 
 	pucConfigBuf = (uint8_t *)kalMemAlloc(WLAN_CFG_FILE_BUF_SIZE,
 					      VIR_MEM_TYPE);
 	kalMemZero(pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE);
 	if (pucConfigBuf) {
-		if (kalRequestFirmware("txpowerctrl.cfg", pucConfigBuf,
+		if (kalReadToFile(u2TxPowerPath,
+			   pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE,
+			   &u4ConfigReadLen) == 0) {
+			DBGLOG(RLM, INFO,"path: %s\n",u2TxPowerPath);
+			/* ToDo:: Nothing */
+		} else if (kalRequestFirmware("txpowerctrl.cfg", pucConfigBuf,
 		    WLAN_CFG_FILE_BUF_SIZE, &u4ConfigReadLen,
 		    prAdapter->prGlueInfo->prDev) == 0) {
 			/* ToDo:: Nothing */
-		} else if (kalReadToFile("/data/misc/wifi/txpowerctrl.cfg",
-			   pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE,
-			   &u4ConfigReadLen) == 0) {
-			/* ToDo:: Nothing */
-		} else if (kalReadToFile("/storage/sdcard0/txpowerctrl.cfg",
+		}  else if (kalReadToFile("/storage/sdcard0/txpowerctrl.cfg",
 			   pucConfigBuf, WLAN_CFG_FILE_BUF_SIZE,
 			   &u4ConfigReadLen) == 0) {
 			/* ToDo:: Nothing */

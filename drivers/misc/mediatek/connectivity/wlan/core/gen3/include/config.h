@@ -134,6 +134,8 @@
 
 #define CFG_SUPPORT_LOWLATENCY_MODE		1
 
+#define CFG_SUPPORT_ANT_SWAP		1
+
 #define CFG_SUPPORT_OSHARE			1
 
 /*------------------------------------------------------------------------------
@@ -481,8 +483,15 @@
  * Auto Channel Selection maximun channel number
  *------------------------------------------------------------------------------
  */
+#ifndef VENDOR_EDIT
+//Pan.Zhang@PSW.CN.WiFi.Basic.SoftAP.1153775, 2018/01/17,
+//Modify for set softap max 2.4G band 11 channel.
 #define MAX_CHN_NUM                             39 /* CH1~CH14, CH36~CH48, CH52~CH64, CH100~CH144, CH149~CH165 */
 #define MAX_2G_BAND_CHN_NUM                     14
+#else /* VENDOR_EDIT */
+#define MAX_CHN_NUM                             36 /* CH1~CH11, CH36~CH48, CH52~CH64, CH100~CH144, CH149~CH165 */
+#define MAX_2G_BAND_CHN_NUM                     11
+#endif /* VENDOR_EDIT */
 #define ACS_PRINT_BUFFER_LEN                   200
 
 /*------------------------------------------------------------------------------
@@ -860,9 +869,24 @@
  */
 #define CFG_SUPPORT_SNIFFER                 1
 
+//Shimin.Jiang@PSW.CN.WiFi.Connect.disconnect.1367902, 2018/5/4
+//Modify for 1367902 avoding disconnect
+/*
 #define CFG_SUPPORT_DETECT_SECURITY_MODE_CHANGE 1
+*/
+//#else
+#define CFG_SUPPORT_DETECT_SECURITY_MODE_CHANGE 0
+//#endif /*VENDOR_EDIT*/
 
+//#ifdef VENDOR_EDIT
+//Shimin.Jiang@PSW.CN.WiFi.Connect.disconnect.1568769, 2018/10/02
+//Modify for 1568769 can not connect cam device
+/*
 #define CFG_IGNORE_INVALID_AUTH_TSN		0
+*/
+//#else
+#define CFG_IGNORE_INVALID_AUTH_TSN		1
+//#endif /*VENDOR_EDIT*/
 
 /*------------------------------------------------------------------------------
  * Flags of Drop Packet Replay SUPPORT

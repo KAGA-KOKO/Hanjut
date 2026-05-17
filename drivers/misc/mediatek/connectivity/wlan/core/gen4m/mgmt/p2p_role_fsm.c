@@ -1520,9 +1520,6 @@ void p2pRoleFsmRunEventStopAP(IN struct ADAPTER *prAdapter,
 	p2pFuncStopRdd(prAdapter, prP2pBssInfo->ucBssIndex);
 #endif
 
-	kalP2PResetBlackList(prAdapter->prGlueInfo,
-		prP2pStopApMsg->ucRoleIdx);
-
 	if (prP2pRoleFsmInfo->eCurrentState != P2P_ROLE_STATE_REQING_CHANNEL) {
 		p2pFuncStopGO(prAdapter, prP2pBssInfo);
 
@@ -2737,7 +2734,8 @@ p2pRoleFsmRunEventChnlGrant(IN struct ADAPTER *prAdapter,
 				DBGLOG(P2P, WARN,
 				       "p2pRoleFsmRunEventChnlGrant: Invalid Channel Request Type:%d\n",
 				       prChnlReqInfo->eChnlReqType);
-				ASSERT(FALSE);
+				GL_RESET_TRIGGER(prAdapter,
+					RST_FLAG_CHIP_RESET);
 				break;
 			}
 
@@ -2805,7 +2803,8 @@ p2pRoleFsmRunEventChnlGrant(IN struct ADAPTER *prAdapter,
 				DBGLOG(P2P, WARN,
 				       "p2pRoleFsmRunEventChnlGrant: Invalid CurrentState:%d\n",
 				       prP2pRoleFsmInfo->eCurrentState);
-				ASSERT(FALSE);
+				GL_RESET_TRIGGER(prAdapter,
+					RST_FLAG_CHIP_RESET);
 			}
 			break;
 		}

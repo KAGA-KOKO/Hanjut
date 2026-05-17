@@ -1,5 +1,5 @@
 MTK_PLATFORM := $(subst ",,$(CONFIG_MTK_PLATFORM))
-MET_ROOT_DIR := $(srctree)/drivers/misc/mediatek/met
+MET_ROOT_DIR := $(srctree)/../vendor/mediatek/kernel_modules/met_drv/4.9
 MET_COMMON_DIR := $(wildcard $(MET_ROOT_DIR)/common)
 MET_PLF_DIR := $(wildcard $(MET_ROOT_DIR)/$(MTK_PLATFORM))
 MET_BUILD_DEFAULT := n

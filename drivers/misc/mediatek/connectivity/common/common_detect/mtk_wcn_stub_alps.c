@@ -69,10 +69,6 @@ do { \
 #include <mtk_wcn_cmb_stub.h>
 #include <wmt_build_in_adapter.h>
 #include "wmt_detect.h"
-#ifndef WMT_TRIGGER_ASSERT_CB_DEFINED
-#define WMT_TRIGGER_ASSERT_CB_DEFINED
-typedef int (*wmt_trigger_assert_cb)(void);
-#endif
 
 
 /*******************************************************************************
@@ -199,14 +195,14 @@ int mtk_wcn_cmb_stub_reg(struct _CMB_STUB_CB_ *p_stub_cb)
 	cmb_stub_aif_ctrl_cb = p_stub_cb->aif_ctrl_cb;
 	cmb_stub_func_ctrl_cb = p_stub_cb->func_ctrl_cb;
 	cmb_stub_thermal_ctrl_cb = p_stub_cb->thermal_query_cb;
-	cmb_stub_trigger_assert_cb = NULL;
+	cmb_stub_trigger_assert_cb = p_stub_cb->trigger_assert_cb;
 	cmb_stub_deep_idle_ctrl_cb = p_stub_cb->deep_idle_ctrl_cb;
 	cmb_stub_do_reset_cb = p_stub_cb->wmt_do_reset_cb;
 	cmb_stub_clock_fail_dump_cb = p_stub_cb->clock_fail_dump_cb;
 
 #ifndef MTK_WCN_REMOVE_KERNEL_MODULE
 	pbridge.thermal_query_cb = _mtk_wcn_cmb_stub_query_ctrl;
-	/* trigger_assert_cb not supported in this tree */
+	pbridge.trigger_assert_cb = _mtk_wcn_cmb_stub_trigger_assert;
 	pbridge.clock_fail_dump_cb = _mtk_wcn_cmb_stub_clock_fail_dump;
 	wmt_export_platform_bridge_register(&pbridge);
 #endif

@@ -367,7 +367,7 @@ INT32 wmt_plat_init(P_PWR_SEQ_TIME pPwrSeqTime, UINT32 co_clock_type)
 	stub_cb.aif_ctrl_cb = wmt_plat_audio_ctrl;
 	stub_cb.func_ctrl_cb = wmt_plat_func_ctrl;
 	stub_cb.thermal_query_cb = wmt_plat_thermal_ctrl;
-	/* trigger_assert_cb not supported in this kernel tree */
+	stub_cb.trigger_assert_cb = wmt_plat_assert_ctrl;
 	stub_cb.deep_idle_ctrl_cb = wmt_plat_deep_idle_ctrl;
 	stub_cb.wmt_do_reset_cb = NULL;
 	stub_cb.clock_fail_dump_cb = wmt_plat_clock_fail_dump;

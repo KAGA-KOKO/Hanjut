@@ -501,9 +501,9 @@ u_int8_t halSetDriverOwn(IN struct ADAPTER *prAdapter)
 	}
 
 	KAL_REC_TIME_END();
-	DBGLOG_LIMITED(INIT, INFO,
-		"DRIVER OWN Done[%lu us]\n", KAL_GET_TIME_INTERVAL());
-
+        //Mingkai.Yu@ODM_WT.BSP.CONN.WIFI.BugID2748136, 2020/05/13, Modify for reduce reduce wifi kernel log print.
+	/*DBGLOG_LIMITED(INIT, INFO,
+		"DRIVER OWN Done[%lu us]\n", KAL_GET_TIME_INTERVAL());*/
 	return fgStatus;
 }
 
@@ -552,7 +552,8 @@ void halSetFWOwn(IN struct ADAPTER *prAdapter, IN u_int8_t fgEnableGlobalInt)
 
 		prAdapter->fgIsFwOwn = TRUE;
 
-		DBGLOG_LIMITED(INIT, INFO, "FW OWN:%u\n", fgResult);
+                //Mingkai.Yu@ODM_WT.BSP.CONN.WIFI.BugID2748136, 2020/05/13, Modify for reduce reduce wifi kernel log print.
+		//DBGLOG_LIMITED(INIT, INFO, "FW OWN:%u\n", fgResult);
 	}
 }
 

@@ -218,6 +218,12 @@ BOOL secCheckClassError(IN P_ADAPTER_T prAdapter, IN P_SW_RFB_T prSwRfb, IN P_ST
 		       "RX_CLASSERR: prStaRec=%p StatusFlag=0x%x, PktTYpe=0x%x, WlanIdx=%d StaRecIdx=%d eDst=%d\n",
 		       prStaRec, prRxStatus->u2StatusFlag, prRxStatus->u2PktTYpe,
 		       prSwRfb->ucWlanIdx, prSwRfb->ucStaRecIdx, prSwRfb->eDst);
+
+		if ((prRxStatus->u2StatusFlag == 0xc004) && (prSwRfb->ucStaRecIdx == 255)) {
+			/*driver skip abnormal packets.*/
+			return FALSE;
+		}
+
 		DBGLOG_MEM8(RX, WARN, prSwRfb->pucRecvBuff,
 		    (HAL_RX_STATUS_GET_RX_BYTE_CNT(prRxStatus) > 64) ? 64 : HAL_RX_STATUS_GET_RX_BYTE_CNT(prRxStatus));
 		/* if (IS_NET_ACTIVE(prAdapter, ucBssIndex)) { */

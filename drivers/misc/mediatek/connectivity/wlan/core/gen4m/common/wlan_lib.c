@@ -69,6 +69,11 @@
  */
 #include "precomp.h"
 #include "mgmt/ais_fsm.h"
+#ifdef VENDOR_EDIT
+//Lei.Zhang@CONNECTIVITY.WIFI.HARDWARE.SAR.1785313, 2020/09/12
+//add hex project name compatible
+#include <oppo/oppo_project.h>
+#endif
 
 /*******************************************************************************
  *                              C O N S T A N T S
@@ -312,7 +317,8 @@ void wlanAdapterDestroy(IN struct ADAPTER *prAdapter)
 	if (!prAdapter)
 		return;
 
-	scanLogCacheFlushAll(&(prAdapter->rWifiVar.rScanInfo.rScanLogCache),
+	scanLogCacheFlushAll(prAdapter,
+		&(prAdapter->rWifiVar.rScanInfo.rScanLogCache),
 		LOG_SCAN_D2D, SCAN_LOG_MSG_MAX_LEN);
 
 	kalMemFree(prAdapter, VIR_MEM_TYPE, sizeof(struct ADAPTER));
@@ -5243,12 +5249,17 @@ void wlanDumpBssStatistics(IN struct ADAPTER *prAdapter,
 
 	/* <2>Dump BSS statistics */
 	for (eAci = 0; eAci < WMM_AC_INDEX_NUM; eAci++) {
+        //#ifdef ODM_WT_EDIT
+        //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
+        /*
 		DBGLOG(SW4, INFO,
 		       "LLS BSS[%u] %s: T[%06u] R[%06u] T_D[%06u] T_F[%06u]\n",
 		       prBssInfo->ucBssIndex, apucACI2Str[eAci],
 		       arLLStats[eAci].u4TxMsdu,
 		       arLLStats[eAci].u4RxMsdu, arLLStats[eAci].u4TxDropMsdu,
 		       arLLStats[eAci].u4TxFailMsdu);
+        */
+        //#endif /* ODM_WT_EDIT */
 	}
 }
 
@@ -6751,7 +6762,10 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	prWifiVar->ucMsduReportTimeout =
 		(uint8_t) wlanCfgGetUint32(prAdapter,
 		"MsduReportTimeout", HIF_MSDU_REPORT_DUMP_TIMEOUT);
-
+    #if (CFG_SUPPORT_P2PGO_ACS == 1)
+        prWifiVar->ucP2pGoACS = (uint8_t) wlanCfgGetUint32(
+            prAdapter, "P2pGoACSEnable", FEATURE_ENABLED);
+    #endif
 }
 
 void wlanCfgSetSwCtrl(IN struct ADAPTER *prAdapter)
@@ -8822,13 +8836,16 @@ wlanPktTxDone(IN struct ADAPTER *prAdapter,
 		((prMsduInfo->ucPktType == ENUM_PKT_ARP) ||
 		(prMsduInfo->ucPktType == ENUM_PKT_DHCP))) {
 		if (rCurrent - prPktProfile->rHardXmitArrivalTimestamp > 2000) {
-			DBGLOG(TX, INFO,
+            //#ifndef ODM_WT_EDIT
+            //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2020/01/08, Modify for reduce reduce wifi kernel log print.
+			DBGLOG(TX, TRACE,
 				"valid %d; ArriveDrv %u, Enq %u, Deq %u, LeaveDrv %u, TxDone %u\n",
 				prPktProfile->fgIsValid,
 				prPktProfile->rHardXmitArrivalTimestamp,
 				prPktProfile->rEnqueueTimestamp,
 				prPktProfile->rDequeueTimestamp,
 				prPktProfile->rHifTxDoneTimestamp, rCurrent);
+            //#endif /* ODM_WT_EDIT */
 
 			if (prMsduInfo->ucPktType == ENUM_PKT_ARP)
 				prAdapter->prGlueInfo->fgTxDoneDelayIsARP =
@@ -9521,19 +9538,70 @@ wlanGetChannelNumFromIndex(IN uint8_t ucIdx)
 }
 
 void
-wlanSortChannel(IN struct ADAPTER *prAdapter)
+wlanSortChannel(IN struct ADAPTER *prAdapter,
+		IN enum ENUM_CHNL_SORT_POLICY ucSortType)
 {
 	struct PARAM_GET_CHN_INFO *prChnLoadInfo = &
 			(prAdapter->rWifiVar.rChnLoadInfo);
 	int8_t ucIdx = 0, ucRoot = 0, ucChild = 0;
+#if (CFG_SUPPORT_P2PGO_ACS == 1)
+	uint8_t i = 0, ucBandIdx = 0, ucNumOfChannel = 0, ucChNum = 0;
+	struct RF_CHANNEL_INFO aucChannelList[MAX_CHN_NUM];
+#endif
 	struct PARAM_CHN_RANK_INFO rChnRankInfo;
 
 	/* prepare unsorted ch rank list */
-	for (ucIdx = 0; ucIdx < MAX_CHN_NUM; ++ucIdx) {
-		prChnLoadInfo->rChnRankList[ucIdx].ucChannel =
-			prChnLoadInfo->rEachChnLoad[ucIdx].ucChannel;
-		prChnLoadInfo->rChnRankList[ucIdx].u4Dirtiness =
-			prChnLoadInfo->rEachChnLoad[ucIdx].u4Dirtiness;
+#if (CFG_SUPPORT_P2PGO_ACS == 1)
+	if (ucSortType == CHNL_SORT_POLICY_BY_CH_DOMAIN) {
+		for (ucBandIdx = BAND_2G4; ucBandIdx <= BAND_5G; ucBandIdx++) {
+			rlmDomainGetChnlList(prAdapter, ucBandIdx, TRUE,
+				MAX_CHN_NUM, &ucNumOfChannel, aucChannelList);
+
+			DBGLOG(SCN, TRACE, "[ACS]Band=%d, Channel Number=%d\n",
+			       ucBandIdx,
+			       ucNumOfChannel);
+
+			for (i = 0; i < ucNumOfChannel; i++) {
+				ucIdx = wlanGetChannelIndex(
+					aucChannelList[i].ucChannelNum);
+				prChnLoadInfo->
+					rChnRankList[ucChNum+i].ucChannel =
+				prChnLoadInfo->rEachChnLoad[ucIdx].ucChannel;
+				prChnLoadInfo->
+					rChnRankList[ucChNum+i].u4Dirtiness =
+				prChnLoadInfo->rEachChnLoad[ucIdx].u4Dirtiness;
+
+				DBGLOG(SCN, TRACE, "[ACS]Ch=%d, eIdx=%d, cIdx=%d",
+					aucChannelList[i].ucChannelNum,
+					ucIdx, ucChNum+i);
+				DBGLOG(SCN, TRACE, "[ACS]ChR[%d],eCh[%d]\n",
+					prChnLoadInfo->rChnRankList[ucChNum+i].
+						ucChannel,
+					prChnLoadInfo->rEachChnLoad[ucIdx].
+						ucChannel);
+			}
+			ucChNum += ucNumOfChannel;
+		}
+
+		/*Set the reset idx to invalid value*/
+		for (i = ucChNum; i < MAX_CHN_NUM; i++) {
+			prChnLoadInfo->rChnRankList[i].u4Dirtiness = 0xFFFFFFFF;
+			prChnLoadInfo->rChnRankList[i].ucChannel = 0xFF;
+
+			DBGLOG(SCN, TRACE, "ucChNum=%d,[ACS]Chn=%d,D=%x\n",
+				ucChNum,
+				prChnLoadInfo->rChnRankList[i].ucChannel,
+				prChnLoadInfo->rChnRankList[i].u4Dirtiness);
+		}
+	} else
+#endif
+	{
+		for (ucIdx = 0; ucIdx < MAX_CHN_NUM; ++ucIdx) {
+			prChnLoadInfo->rChnRankList[ucIdx].ucChannel =
+				prChnLoadInfo->rEachChnLoad[ucIdx].ucChannel;
+			prChnLoadInfo->rChnRankList[ucIdx].u4Dirtiness =
+				prChnLoadInfo->rEachChnLoad[ucIdx].u4Dirtiness;
+		}
 	}
 
 	/* heapify ch rank list */
@@ -9551,10 +9619,15 @@ wlanSortChannel(IN struct ADAPTER *prAdapter)
 			    prChnLoadInfo->rChnRankList[ucRoot].u4Dirtiness)
 				break;
 
-			rChnRankInfo = prChnLoadInfo->rChnRankList[ucChild];
-			prChnLoadInfo->rChnRankList[ucChild] =
-				prChnLoadInfo->rChnRankList[ucRoot];
-			prChnLoadInfo->rChnRankList[ucRoot] = rChnRankInfo;
+			kalMemCopy(&rChnRankInfo,
+				&(prChnLoadInfo->rChnRankList[ucChild]),
+				sizeof(struct PARAM_CHN_RANK_INFO));
+			kalMemCopy(&prChnLoadInfo->rChnRankList[ucChild],
+				&prChnLoadInfo->rChnRankList[ucRoot],
+				sizeof(struct PARAM_CHN_RANK_INFO));
+			kalMemCopy(&prChnLoadInfo->rChnRankList[ucRoot],
+				&rChnRankInfo,
+				sizeof(struct PARAM_CHN_RANK_INFO));
 		}
 	}
 
@@ -9568,25 +9641,40 @@ wlanSortChannel(IN struct ADAPTER *prAdapter)
 		for (ucRoot = 0; ucRoot * 2 + 1 < ucIdx; ucRoot = ucChild) {
 			ucChild = ucRoot * 2 + 1;
 			if (ucChild < ucIdx - 1 && prChnLoadInfo->
-			    rChnRankList[ucChild + 1].u4Dirtiness >
-			    prChnLoadInfo->rChnRankList[ucChild].u4Dirtiness)
+				rChnRankList[ucChild + 1].u4Dirtiness >
+				prChnLoadInfo->rChnRankList[ucChild].
+					u4Dirtiness)
 				ucChild += 1;
 
 			if (prChnLoadInfo->rChnRankList[ucChild].u4Dirtiness <=
 			    prChnLoadInfo->rChnRankList[ucRoot].u4Dirtiness)
 				break;
 
-			rChnRankInfo = prChnLoadInfo->rChnRankList[ucChild];
-			prChnLoadInfo->rChnRankList[ucChild] =
-				prChnLoadInfo->rChnRankList[ucRoot];
-			prChnLoadInfo->rChnRankList[ucRoot] = rChnRankInfo;
+			kalMemCopy(&rChnRankInfo,
+				&(prChnLoadInfo->rChnRankList[ucChild]),
+				sizeof(struct PARAM_CHN_RANK_INFO));
+			kalMemCopy(&prChnLoadInfo->rChnRankList[ucChild],
+				&prChnLoadInfo->rChnRankList[ucRoot],
+				sizeof(struct PARAM_CHN_RANK_INFO));
+			kalMemCopy(&prChnLoadInfo->rChnRankList[ucRoot],
+				&rChnRankInfo,
+				sizeof(struct PARAM_CHN_RANK_INFO));
 		}
 	}
 
-	for (ucIdx = 0; ucIdx < MAX_CHN_NUM; ++ucIdx)
-		log_dbg(P2P, TEMP, "[ACS]channel=%d, dirtiness=%d\n",
-		       prChnLoadInfo->rChnRankList[ucIdx].ucChannel,
-		       prChnLoadInfo->rChnRankList[ucIdx].u4Dirtiness);
+	for (ucIdx = 0; ucIdx < MAX_CHN_NUM; ++ucIdx) {
+		#ifndef VENDOR_EDIT
+		//YangQing@CONNECTIVITY.WIFI.CONNECTION, 2020/09/11,
+		//Modify for reduce normal log
+		DBGLOG(SCN, TRACE, "[ACS]channel=%d,dirtiness=%d\n",
+			prChnLoadInfo->rChnRankList[ucIdx].ucChannel,
+			prChnLoadInfo->rChnRankList[ucIdx].u4Dirtiness);
+		#else /* VENDOR_EDIT */
+		DBGLOG(SCN, LOUD, "[ACS]channel=%d,dirtiness=%d\n",
+			prChnLoadInfo->rChnRankList[ucIdx].ucChannel,
+			prChnLoadInfo->rChnRankList[ucIdx].u4Dirtiness);
+		#endif /* VENDOR_EDIT */
+	}
 
 }
 
@@ -10434,10 +10522,25 @@ uint64_t wlanGetSupportedFeatureSet(IN struct GLUE_INFO *prGlueInfo)
 {
 	uint64_t u8FeatureSet = WIFI_HAL_FEATURE_SET;
 	struct REG_INFO *prRegInfo;
+	#ifdef VENDOR_EDIT
+	//Laixin@PSW.CN.WiFi.Basic.Custom.1130116, 2019/03/22
+	//Add for: inform if DBDC supports
+	struct ADAPTER *prAdapter;
+	#endif /* VENDOR_EDIT */
 
 	prRegInfo = prGlueInfo->prRegInfo;
 	if ((prRegInfo != NULL) && (prRegInfo->ucSupport5GBand))
 		u8FeatureSet |= WIFI_FEATURE_INFRA_5G;
+
+	#ifdef VENDOR_EDIT
+	//Laixin@PSW.CN.WiFi.Basic.Custom.1130116, 2019/03/22
+	//Add for: inform if DBDC supports
+	prAdapter = prGlueInfo->prAdapter;
+    if (prAdapter != NULL &&
+        prAdapter->rWifiVar.eDbdcMode == ENUM_DBDC_MODE_DYNAMIC) {
+		u8FeatureSet |= WIFI_FEATURE_DBDC;
+	}
+	#endif /* VENDOR_EDIT */
 
 	return u8FeatureSet;
 }
@@ -10504,7 +10607,9 @@ uint32_t wlanLinkQualityMonitor(struct GLUE_INFO *prGlueInfo, bool bFgIsOid)
 	wlanCustomMonitorFunction(prAdapter, prLinkQualityInfo);
 #endif
 
-	DBGLOG(SW4, INFO,
+    //#ifndef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2020/01/08, Modify for reduce reduce wifi kernel log print.
+	DBGLOG(SW4, TRACE,
 	       "Link Quality: Tx(rate:%u total:%u, retry:%u, fail:%u, rts_fail:%u, ack_fail:%u), Rx(rate:%u, total:%u, dup:%u, fcs_fail:%u), PER(%u), Congestion(%u)\n",
 	       prLinkQualityInfo->u4CurTxRate, /* current tx link speed */
 	       prLinkQualityInfo->u4TxTotalCount, /* tx total packages */
@@ -10519,6 +10624,7 @@ uint32_t wlanLinkQualityMonitor(struct GLUE_INFO *prGlueInfo, bool bFgIsOid)
 	       prLinkQualityInfo->u4CurTxPer, /* current Tx PER */
 	       /* congestion stats */
 	       prLinkQualityInfo->u4DiffIdleSlotCount /* idle slot diff */
+    //#endif /* ODM_WT_EDIT */
 	);
 
 	return u4Status;
@@ -10651,3 +10757,59 @@ uint32_t wlanSetForceRTS(
 
 	return WLAN_STATUS_SUCCESS;
 }
+
+u_int8_t wlanWfdEnabled(struct ADAPTER *prAdapter)
+{
+#if CFG_SUPPORT_WFD
+	if (prAdapter)
+		return prAdapter->rWifiVar.rWfdConfigureSettings.ucWfdEnable;
+#endif
+	return FALSE;
+}
+
+#ifdef VENDOR_EDIT
+//Lei.Zhang@CONNECTIVITY.WIFI.HARDWARE.SAR.1785313, 2020/09/12
+//add hex project name compatible
+#define PROJECT_NAME_LEN    5
+static char g_realProjectName[PROJECT_NAME_LEN + 1] = "";
+
+//process project name like 2027A, get_project return 0x2027A, so we need process it.
+uint32_t getOplusRealProjectName(char *prjName, uint8_t len)
+{
+    int u4PrjName = -1;
+    char prjNameStr[PROJECT_NAME_LEN + 2] = "0"; //add 1 more byte to judge hex project name
+
+    if (prjName == NULL || len < PROJECT_NAME_LEN + 1) {
+        DBGLOG(NIC, ERROR, "getOplusRealProjectName invalid input\n");
+        return WLAN_STATUS_INVALID_DATA;
+    }
+
+    kalMemZero(prjName, len);
+
+    if (strlen(g_realProjectName) == PROJECT_NAME_LEN) {
+        kalMemCopy(prjName, g_realProjectName, PROJECT_NAME_LEN);
+        return WLAN_STATUS_SUCCESS;
+    }
+
+    u4PrjName = get_project();
+
+    snprintf(prjNameStr, sizeof(prjNameStr), "%d", u4PrjName);
+    prjNameStr[sizeof(prjNameStr)-1] = '\0';
+
+    //normal project name
+    if (strlen(prjNameStr) == PROJECT_NAME_LEN) {
+        kalMemCopy(g_realProjectName, prjNameStr, PROJECT_NAME_LEN);
+    //hex project name
+    } else {
+        snprintf(g_realProjectName, sizeof(g_realProjectName), "%X", u4PrjName);
+        g_realProjectName[sizeof(g_realProjectName)-1] = '\0';
+    }
+
+    DBGLOG(INIT, INFO, "realProjectname = [%s]\n", g_realProjectName);
+    kalMemCopy(prjName, g_realProjectName, PROJECT_NAME_LEN);
+
+    return WLAN_STATUS_SUCCESS;
+}
+
+#endif
+

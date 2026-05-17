@@ -2582,7 +2582,11 @@ UINT8 *wmt_lib_get_fwinfor_from_emi(UINT8 section, UINT32 offset, UINT8 *buf, UI
 		if (!pAddr) {
 			WMT_ERR_FUNC("wmt-lib: get EMI virtual base address fail\n");
 		} else {
+			#ifndef VENDOR_EDIT
+			//Pan.Zhang@PSW.CN.WiFi.Basic.Log.1120881, 2017/09/27,
+			//Remove for reduce useless log.
 			WMT_INFO_FUNC("vir addr(0x%p)\n", pAddr);
+			#endif /* VENDOR_EDIT */
 			osal_memcpy_fromio(&buf[0], pAddr, len);
 		}
 	} else {
@@ -2616,7 +2620,11 @@ UINT8 *wmt_lib_get_fwinfor_from_emi(UINT8 section, UINT32 offset, UINT8 *buf, UI
 			if (!pAddr) {
 				WMT_ERR_FUNC("wmt-lib: get EMI virtual base address fail\n");
 			} else {
+				#ifndef VENDOR_EDIT
+				//Pan.Zhang@PSW.CN.WiFi.Basic.Log.1120881, 2017/09/27,
+				//Remove for reduce useless log.
 				WMT_INFO_FUNC("vir addr(0x%p)\n", pAddr);
+				#endif /* VENDOR_EDIT */
 				osal_memcpy_fromio(&buf[0], pAddr, len);
 			}
 		}

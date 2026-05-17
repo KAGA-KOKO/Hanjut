@@ -60,8 +60,8 @@
 
 #ifdef CONFIG_MTK_EMI
 #include <mt_emi_api.h>
-#define WIFI_EMI_MEM_OFFSET    0x140000
-#define WIFI_EMI_MEM_SIZE      0x130000
+#define WIFI_EMI_MEM_OFFSET    0x177000
+#define WIFI_EMI_MEM_SIZE      0xBD000
 #endif
 
 
@@ -145,3 +145,9 @@ void kalSetDrvEmiMpuProtection(phys_addr_t emiPhyBase, uint32_t offset,
 	emi_mpu_set_protection(&region_info);
 }
 #endif
+
+int32_t kalGetFwFlavor(uint8_t *flavor)
+{
+	*flavor = 'b';
+	return 1;
+}

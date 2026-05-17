@@ -2042,7 +2042,10 @@ nicTxFillDesc(IN struct ADAPTER *prAdapter,
 		/* Overwrite fields for EOSP or More data */
 		nicTxFillDescByPktOption(prMsduInfo, prTxDesc);
 	} else { /* Compose TXD by Msdu info */
-		DBGLOG_LIMITED(NIC, INFO, "Compose TXD by Msdu info\n");
+        //#ifndef ODM_WT_EDIT
+        //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2020/01/08, Modify for reduce reduce wifi kernel log print.
+		DBGLOG_LIMITED(NIC, TRACE, "Compose TXD by Msdu info\n");
+        //#endif /* ODM_WT_EDIT */
 #if (UNIFIED_MAC_TX_FORMAT == 1)
 		if (prMsduInfo->eSrc == TX_PACKET_MGMT)
 			prMsduInfo->ucPacketFormat = TXD_PKT_FORMAT_COMMAND;
@@ -2513,6 +2516,8 @@ uint32_t nicTxMsduQueue(IN struct ADAPTER *prAdapter,
 			wlanTxLifetimeTagPacket(prAdapter, prMsduInfo,
 						TX_PROF_TAG_DRV_TX_DONE);
 
+		if (!prMsduInfo->prPacket)
+			continue;
 #if (CFG_SUPPORT_STATISTICS == 1)
 		StatsEnvTxTime2Hif(prAdapter, prMsduInfo);
 #endif

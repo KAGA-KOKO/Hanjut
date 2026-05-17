@@ -791,7 +791,7 @@ typedef struct _EVENT_NIC_CAPABILITY_T {
 	UINT_8 ucEepromUsed;
 	UINT_8 aucMacAddr[6];
 	UINT_8 ucEndianOfMacAddrNumber;
-	UINT_8 ucReserved;
+	UINT_8 ucHwNotSupportAC;
 
 	UINT_8 ucRfVersion;
 	UINT_8 ucPhyVersion;
@@ -803,7 +803,8 @@ typedef struct _EVENT_NIC_CAPABILITY_T {
 	UINT_32 u4CompileFlag0;
 	UINT_32 u4CompileFlag1;
 	UINT_8 aucFwVerExtend[4];
-	UINT_8 aucReserved0[60];
+	UINT_8 ucAntSwapEn;
+	UINT_8 aucReserved0[59];
 } EVENT_NIC_CAPABILITY_T, *P_EVENT_NIC_CAPABILITY_T;
 
 /* modified version of WLAN_BEACON_FRAME_BODY_T for simplier buffering */

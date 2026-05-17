@@ -284,6 +284,11 @@
 #define TX_POWER_SHOW_INFO                              0x7
 #endif
 
+#ifdef CFG_MODIFY_TX_POWER_BY_BAT_VOLT
+#define TX_POWER_PERCENTAGE_CTRL                        0x1
+#define TX_POWER_DROP_CTRL                              0x2
+#endif
+
 #define AGG_RANGE_SEL_NUM                               7
 #define AGG_RANGE_SEL_0_MASK                            BITS(0, 7)
 #define AGG_RANGE_SEL_0_OFFSET                          0

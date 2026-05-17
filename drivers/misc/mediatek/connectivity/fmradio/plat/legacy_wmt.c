@@ -110,15 +110,11 @@ static int fm_wmt_chipid_query(void)
 
 static unsigned char drv_get_top_index(void)
 {
-#if defined(MT6635_FM)
-	return 5;
-#else
 	int chipid = fm_wmt_chipid_query();
 
-	if (chipid == 0x6779 || chipid == 0x6885 || chipid == 0x6873)
+	if (chipid == 0x6779 || chipid == 0x6885)
 		return 5;
 	return 4;
-#endif
 }
 
 void register_fw_ops_init(void)
@@ -153,7 +149,7 @@ int fm_wcn_ops_register(void)
 
 int fm_wcn_ops_unregister(void)
 {
-	register_fw_ops_uninit();
+	register_fw_ops_init();
 
 	return 0;
 }

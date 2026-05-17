@@ -777,21 +777,8 @@ void aisFsmStateInit_JOIN(IN struct ADAPTER *prAdapter,
 	prJoinReqMsg->ucSeqNum = ++prAisFsmInfo->ucSeqNumOfReqMsg;
 	prJoinReqMsg->prStaRec = prStaRec;
 
-	if (1) {
-		int j;
-		struct FRAG_INFO *prFragInfo;
+	nicRxClearFrag(prAdapter, prStaRec);
 
-		for (j = 0; j < MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS; j++) {
-			prFragInfo = &prStaRec->rFragInfo[j];
-
-			if (prFragInfo->pr1stFrag) {
-				/* nicRxReturnRFB(prAdapter,
-				 * prFragInfo->pr1stFrag);
-				 */
-				prFragInfo->pr1stFrag = (struct SW_RFB *)NULL;
-			}
-		}
-	}
 #if CFG_SUPPORT_802_11K
 	rlmSetMaxTxPwrLimit(prAdapter,
 			    (prBssDesc->cPowerLimit != RLM_INVALID_POWER_LIMIT)
@@ -2018,7 +2005,8 @@ void aisFsmSteps(IN struct ADAPTER *prAdapter,
 					prScanRequest->u4ChannelNum,
 					prScanRequest->arChannel,
 					(prAisFsmInfo->eCurrentState ==
-					AIS_STATE_ONLINE_SCAN),
+					AIS_STATE_ONLINE_SCAN) ||
+                                        wlanWfdEnabled(prAdapter),
 					prScanReqMsg);
 				break;
 			default:
@@ -2660,8 +2648,17 @@ void aisFsmRunEventAbort(IN struct ADAPTER *prAdapter,
 
 	aisFsmIsRequestPending(prAdapter, AIS_REQUEST_RECONNECT, TRUE,
 		ucBssIndex);
-	aisFsmInsertRequest(prAdapter, AIS_REQUEST_RECONNECT,
-		ucBssIndex);
+	if (ucReasonOfDisconnect == DISCONNECT_REASON_CODE_NEW_CONNECTION
+#if CFG_SUPPORT_WFD
+	    && wlanWfdEnabled(prAdapter)
+#endif
+	) {
+		aisFsmInsertRequestToHead(prAdapter, AIS_REQUEST_RECONNECT,
+			ucBssIndex);
+	} else {
+		aisFsmInsertRequest(prAdapter, AIS_REQUEST_RECONNECT,
+			ucBssIndex);
+	}
 
 	if (prAisFsmInfo->eCurrentState != AIS_STATE_DISCONNECTING) {
 		if (ucReasonOfDisconnect !=
@@ -2986,13 +2983,15 @@ enum ENUM_AIS_STATE aisFsmJoinCompleteAction(IN struct ADAPTER *prAdapter,
 				 */
 				if ((prAisBssInfo->prStaRecOfAP) &&
 				    (prAisBssInfo->prStaRecOfAP != prStaRec) &&
-				    (prAisBssInfo->prStaRecOfAP->fgIsInUse)) {
+				    (prAisBssInfo->prStaRecOfAP->fgIsInUse) &&
+				    (prAisBssInfo->prStaRecOfAP->ucBssIndex ==
+				     prAisBssInfo->ucBssIndex)) {
 
 					cnmStaRecChangeState(prAdapter,
-					prAisBssInfo->prStaRecOfAP,
-					STA_STATE_1);
+						prAisBssInfo->prStaRecOfAP,
+						STA_STATE_1);
 					cnmStaRecFree(prAdapter,
-					prAisBssInfo->prStaRecOfAP);
+						prAisBssInfo->prStaRecOfAP);
 				}
 
 				/* For temp solution, need to refine */
@@ -4335,11 +4334,9 @@ void aisFsmDisconnect(IN struct ADAPTER *prAdapter,
 		if (prAisBssInfo->ucReasonOfDisconnect ==
 		    DISCONNECT_REASON_CODE_RADIO_LOST ||
 		    (prAisBssInfo->ucReasonOfDisconnect ==
-			DISCONNECT_REASON_CODE_DEAUTHENTICATED &&
-			u2ReasonCode == REASON_CODE_DEAUTH_LEAVING_BSS) ||
+                    DISCONNECT_REASON_CODE_DEAUTHENTICATED) ||
 		    (prAisBssInfo->ucReasonOfDisconnect ==
-			DISCONNECT_REASON_CODE_DISASSOCIATED &&
-			u2ReasonCode == REASON_CODE_DISASSOC_LEAVING_BSS)) {
+                    DISCONNECT_REASON_CODE_DISASSOCIATED)) {
 			scanRemoveBssDescByBssid(prAdapter,
 						 prAisBssInfo->aucBSSID);
 
@@ -5594,6 +5591,47 @@ u_int8_t aisFsmInsertRequest(IN struct ADAPTER *prAdapter,
 
 	/* attach request into pending request list */
 	LINK_INSERT_TAIL(&prAisFsmInfo->rPendingReqList, &prAisReq->rLinkEntry);
+
+	DBGLOG(AIS, INFO, "eCurrentState=%d, eReqType=%d, u4NumElem=%d\n",
+	       prAisFsmInfo->eCurrentState, eReqType,
+	       prAisFsmInfo->rPendingReqList.u4NumElem);
+
+	return TRUE;
+}
+
+/*----------------------------------------------------------------------------*/
+/*!
+ * @brief Insert a new request to head
+ *
+ * @param prAdapter
+ *        eReqType
+ *
+ * @return TRUE
+ *         FALSE
+ */
+/*----------------------------------------------------------------------------*/
+u_int8_t aisFsmInsertRequestToHead(IN struct ADAPTER *prAdapter,
+			     IN enum ENUM_AIS_REQUEST_TYPE eReqType,
+			     IN uint8_t ucBssIndex)
+{
+	struct AIS_REQ_HDR *prAisReq;
+	struct AIS_FSM_INFO *prAisFsmInfo;
+
+	prAisFsmInfo = aisGetAisFsmInfo(prAdapter, ucBssIndex);
+
+	prAisReq =
+	    (struct AIS_REQ_HDR *)cnmMemAlloc(prAdapter, RAM_TYPE_MSG,
+					      sizeof(struct AIS_REQ_HDR));
+
+	if (!prAisReq) {
+		DBGLOG(AIS, ERROR, "Can't generate new message\n");
+		return FALSE;
+	}
+
+	prAisReq->eReqType = eReqType;
+
+	/* attach request into pending request list */
+	LINK_INSERT_HEAD(&prAisFsmInfo->rPendingReqList, &prAisReq->rLinkEntry);
 
 	DBGLOG(AIS, INFO, "eCurrentState=%d, eReqType=%d, u4NumElem=%d\n",
 	       prAisFsmInfo->eCurrentState, eReqType,

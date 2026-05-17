@@ -3891,8 +3891,11 @@ WLAN_STATUS nicApplyNetworkAddress(IN P_ADAPTER_T prAdapter)
 	COPY_MAC_ADDR(prAdapter->rWifiVar.aucDeviceAddress, prAdapter->rMyMacAddr);
 	prAdapter->rWifiVar.aucDeviceAddress[0] ^= MAC_ADDR_LOCAL_ADMIN;
 
-	COPY_MAC_ADDR(prAdapter->rWifiVar.aucInterfaceAddress, prAdapter->rMyMacAddr);
-	prAdapter->rWifiVar.aucInterfaceAddress[0] ^= MAC_ADDR_LOCAL_ADMIN;
+	for (i = 0; i < MAC_ADDR_NUM_STORE; i++) {
+		COPY_MAC_ADDR(prAdapter->rWifiVar.aucInterfaceAddress[i], prAdapter->rMyMacAddr);
+		prAdapter->rWifiVar.aucInterfaceAddress[i][0] |= 0x2;
+		prAdapter->rWifiVar.aucInterfaceAddress[i][0] ^= i << MAC_ADDR_LOCAL_ADMIN;
+	}
 
 #if CFG_ENABLE_WIFI_DIRECT
 	if (prAdapter->fgIsP2PRegistered) {

@@ -4260,11 +4260,14 @@ void nicUpdateLinkQuality(IN struct ADAPTER *prAdapter,
 				cRssi =
 					(int8_t) (((int16_t)
 					(cRssi) * u2AdjustRssi) / 10);
-				DBGLOG(RLM, INFO,
+                //#ifndef ODM_WT_EDIT
+                //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2020/01/08, Modify for reduce wifi kernel log print.
+				DBGLOG(RLM, TRACE,
 					"Rssi=%d, NewRssi=%d\n",
 					prEventLinkQuality->rLq[ucBssIndex].
 					cRssi,
 					cRssi);
+                //#endif /* ODM_WT_EDIT */
 				nicUpdateRSSI(prAdapter, ucBssIndex, cRssi,
 					prEventLinkQuality->rLq[ucBssIndex].
 					cLinkQuality);

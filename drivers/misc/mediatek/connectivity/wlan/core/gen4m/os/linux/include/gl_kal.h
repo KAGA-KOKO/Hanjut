@@ -118,6 +118,11 @@ extern void wlanWakeupSourceRegister(get_count_handler pf_get_count,
 #endif
 #endif
 
+#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
+extern unsigned int wlan_bat_volt;
+extern bool fgIsTxPowerDecreased;
+#endif
+
 /*******************************************************************************
  *                              C O N S T A N T S
  *******************************************************************************
@@ -266,6 +271,9 @@ enum ENUM_SPIN_LOCK_CATEGORY_E {
 
 	SPIN_LOCK_EHPI_BUS,	/* only for EHPI */
 	SPIN_LOCK_NET_DEV,
+
+	SPIN_LOCK_BSSLIST_FW,
+	SPIN_LOCK_BSSLIST_CFG,
 	SPIN_LOCK_NUM
 };
 
@@ -1593,5 +1601,12 @@ void kal_gro_flush(struct ADAPTER *prAdapter, uint8_t ucBssIdx);
 
 int kalExternalAuthRequest(IN struct ADAPTER *prAdapter,
 			   IN uint8_t uBssIndex);
+
+#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
+int32_t kalBatNotifierReg(IN struct GLUE_INFO *prGlueInfo);
+void kalEnableTxPwrBackoffByBattVolt(struct ADAPTER *prAdapter, bool ucEnable);
+void kalSetTxPwrBackoffByBattVolt(struct ADAPTER *prAdapter, bool ucEnable);
+void kalBatNotifierUnReg(void);
+#endif
 
 #endif /* _GL_KAL_H */

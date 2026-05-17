@@ -811,8 +811,9 @@ void scanRemoveBssDescsByPolicy(IN struct ADAPTER *prAdapter,
 
 			if (CHECK_FOR_TIMEOUT(rCurrentTime,
 				prBssDesc->rUpdateTime,
-				SEC_TO_SYSTIME(
-					SCN_BSS_DESC_REMOVE_TIMEOUT_SEC))) {
+				SEC_TO_SYSTIME(wlanWfdEnabled(prAdapter) ?
+					SCN_BSS_DESC_STALE_SEC_WFD :
+					SCN_BSS_DESC_STALE_SEC))) {
 
 #if 0 /* TODO: Remove this */
 				log_dbg(SCN, TRACE, "Remove TIMEOUT BSS DESC(%#x):MAC: "
@@ -2215,8 +2216,15 @@ void scanLogEssResult(struct ADAPTER *prAdapter)
 					strbuf);
 				first = FALSE;
 			} else {
+				#ifndef VENDOR_EDIT
+				//YangQing@CONNECTIVITY.WIFI.CONNECTION, 2020/09/11,
+				//Modify for reduce normal log
 				scanlog_dbg(LOG_SCAN_DONE_D2K, INFO,
 					"%s", strbuf);
+				#else  /* VENDOR_EDIT */
+				scanlog_dbg(LOG_SCAN_DONE_D2K, LOUD,
+					"%s", strbuf);
+				#endif /* VENDOR_EDIT */
 			}
 		}
 		kalStrnCpy(ssid, prEssResult[u4Index].aucSSID, sizeof(ssid));
@@ -2228,8 +2236,15 @@ void scanLogEssResult(struct ADAPTER *prAdapter)
 			scanlog_dbg(LOG_SCAN_DONE_D2K, INFO,
 				"Total:%u/%u %s", u4ResultNum,
 				prAdapter->rWlanInfo.u4ScanResultNum, strbuf);
-		else
+		else {
+			#ifndef VENDOR_EDIT
+			//YangQing@CONNECTIVITY.WIFI.CONNECTION, 2020/09/11,
+			//Modify for reduce normal log
 			scanlog_dbg(LOG_SCAN_DONE_D2K, INFO, "%s", strbuf);
+			#else  /* VENDOR_EDIT */
+			scanlog_dbg(LOG_SCAN_DONE_D2K, LOUD, "%s", strbuf);
+			#endif /* VENDOR_EDIT */
+		}
 	}
 	kalMemFree(strbuf, VIR_MEM_TYPE, slen);
 }
@@ -3716,13 +3731,16 @@ void scanResultLog(struct ADAPTER *prAdapter,
 {
 	struct WLAN_BEACON_FRAME *pFrame =
 		(struct WLAN_BEACON_FRAME *) prSwRfb->pvHeader;
+	KAL_SPIN_LOCK_DECLARATION();
 
+	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_FW);
 	scanLogCacheAddBSS(
 		&(prAdapter->rWifiVar.rScanInfo.rScanLogCache.rBSSListFW),
 		prAdapter->rWifiVar.rScanInfo.rScanLogCache.arBSSListBufFW,
 		LOG_SCAN_RESULT_F2D,
 		pFrame->aucBSSID,
 		pFrame->u2SeqCtrl);
+	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_FW);
 }
 
 void scanLogCacheAddBSS(struct LINK *prList,
@@ -3838,13 +3856,21 @@ void scanLogCacheFlushBSS(struct LINK *prList, enum ENUM_SCAN_LOG_PREFIX prefix,
 	}
 }
 
-void scanLogCacheFlushAll(struct SCAN_LOG_CACHE *prScanLogCache,
+void scanLogCacheFlushAll(struct ADAPTER *prAdapter,
+	struct SCAN_LOG_CACHE *prScanLogCache,
 	enum ENUM_SCAN_LOG_PREFIX prefix, const uint16_t logBufLen)
 {
+	KAL_SPIN_LOCK_DECLARATION();
+
+	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_FW);
 	scanLogCacheFlushBSS(&(prScanLogCache->rBSSListFW),
 		prefix, logBufLen);
+	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_FW);
+
+	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_CFG);
 	scanLogCacheFlushBSS(&(prScanLogCache->rBSSListCFG),
 		prefix, logBufLen);
+	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_CFG);
 }
 
 /*----------------------------------------------------------------------------*/

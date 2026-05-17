@@ -2995,11 +2995,35 @@ static BOOLEAN scanNeedReplaceCandidate(P_ADAPTER_T prAdapter, P_BSS_DESC_T prCa
 
 	/* 1.6 prefer to select 2.4G Bss if Rssi of a 5G band BSS is lower than -70dbm */
 	if (prCandBss->eBand != prCurrBss->eBand) {
+		#ifndef VENDOR_EDIT
+		//Shimin.Jiang@PSW.CN.WiFi.Connect.roaming.1280966,2018/2/22
+		//Modify for bug1280966 :roaming to better rssi ap
 		if (prCandBss->eBand == BAND_5G) {
 			if (cCandRssi < LOW_RSSI_FOR_5G_BAND)
 				return TRUE;
 		} else if (cCurrRssi < LOW_RSSI_FOR_5G_BAND)
 			return FALSE;
+		#else /* VENDOR_EDIT */
+		if (prCandBss->eBand == BAND_5G) {
+			if (cCandRssi >= GOOD_RSSI_FOR_HT_VHT) {
+				return FALSE;
+			}
+			if (cCandRssi < LOW_RSSI_FOR_5G_BAND) {
+				if (cCurrRssi > cCandRssi + 5) {
+					return TRUE;
+				}
+			}
+		}else {
+			if (cCurrRssi >= GOOD_RSSI_FOR_HT_VHT){
+				return TRUE;
+			}
+			if (cCurrRssi < LOW_RSSI_FOR_5G_BAND) {
+				if (cCandRssi  > cCurrRssi + 5) {
+					return FALSE;
+				}
+			}
+		}
+		#endif /* VENDOR_EDIT */
 	}
 	/* 2. Check Score */
 	/* 2.1 Apply influence of preference */

@@ -1738,14 +1738,30 @@ int mtk_cfg80211_connect(struct wiphy *wiphy,
 	return 0;
 }
 
-#if 0
 int mtk_cfg80211_external_auth(struct wiphy *wiphy,
-                              struct net_device *ndev,
-                              struct cfg80211_external_auth_params *params)
+			 struct net_device *ndev,
+			 struct cfg80211_external_auth_params *params)
 {
-    return -EOPNOTSUPP;
+	struct GLUE_INFO *prGlueInfo = NULL;
+	uint32_t rStatus = WLAN_STATUS_FAILURE;
+	uint32_t u4BufLen;
+	struct PARAM_EXTERNAL_AUTH auth;
+
+	prGlueInfo = (struct GLUE_INFO *) wiphy_priv(wiphy);
+	if (!prGlueInfo)
+		DBGLOG(REQ, WARN,
+		       "SAE-confirm failed with invalid prGlueInfo\n");
+
+	COPY_MAC_ADDR(auth.bssid, params->bssid);
+	auth.status = params->status;
+	auth.ucBssIdx = wlanGetBssIdx(ndev);
+	rStatus = kalIoctl(prGlueInfo, wlanoidExternalAuthDone, (void *)&auth,
+			   sizeof(auth), FALSE, FALSE, FALSE, &u4BufLen);
+	if (rStatus != WLAN_STATUS_SUCCESS)
+		DBGLOG(OID, INFO, "SAE-confirm failed with: %d\n", rStatus);
+
+	return 0;
 }
-#endif
 
 /*----------------------------------------------------------------------------*/
 /*!
@@ -5162,9 +5178,8 @@ end:
 int mtk_cfg80211_resume(struct wiphy *wiphy)
 {
 	struct GLUE_INFO *prGlueInfo = NULL;
-	struct BSS_DESC **pprBssDesc = NULL;
 	struct ADAPTER *prAdapter = NULL;
-	uint8_t i = 0;
+	uint32_t rStatus, u4InfoLen;
 
 	DBGLOG(REQ, INFO, "mtk_cfg80211_resume\n");
 
@@ -5182,22 +5197,15 @@ int mtk_cfg80211_resume(struct wiphy *wiphy)
 
 	clear_bit(SUSPEND_FLAG_CLEAR_WHEN_RESUME,
 		  &prAdapter->ulSuspendFlag);
-	pprBssDesc = &prAdapter->rWifiVar.rScanInfo.rSchedScanParam.
-		     aprPendingBssDescToInd[0];
-	for (; i < SCN_SSID_MATCH_MAX_NUM; i++) {
-		if (pprBssDesc[i] == NULL)
-			break;
-		if (pprBssDesc[i]->u2RawLength == 0)
-			continue;
-		kalIndicateBssInfo(prGlueInfo,
-				   (uint8_t *) pprBssDesc[i]->aucRawBuf,
-				   pprBssDesc[i]->u2RawLength,
-				   pprBssDesc[i]->ucChannelNum,
-				   RCPI_TO_dBm(pprBssDesc[i]->ucRCPI));
-	}
-	DBGLOG(SCN, INFO, "pending %d sched scan results\n", i);
-	if (i > 0)
-		kalMemZero(&pprBssDesc[0], i * sizeof(struct BSS_DESC *));
+
+	rStatus = kalIoctl(prGlueInfo,
+			wlanoidIndicateBssInfo,
+			(void *) NULL,
+			0,
+			FALSE, FALSE, FALSE, &u4InfoLen);
+	if (rStatus != WLAN_STATUS_SUCCESS)
+		DBGLOG(REQ, WARN, "ScanResultLog error:%x\n",
+		rStatus);
 
 end:
 	kalHaltUnlock();

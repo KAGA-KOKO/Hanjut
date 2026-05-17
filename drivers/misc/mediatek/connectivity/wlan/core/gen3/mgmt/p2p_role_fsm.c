@@ -79,8 +79,19 @@ UINT_8 p2pRoleFsmInit(IN P_ADAPTER_T prAdapter, IN UINT_8 ucRoleIdx)
 		/* For state identify, not really used. */
 		prP2pBssInfo->eIntendOPMode = OP_MODE_P2P_DEVICE;
 
-		COPY_MAC_ADDR(prP2pBssInfo->aucOwnMacAddr, prAdapter->rMyMacAddr);
-		prP2pBssInfo->aucOwnMacAddr[0] ^= 0x2;	/* change to local administrated address */
+		if ((prAdapter->prGlueInfo != NULL)
+			&& (prAdapter->prGlueInfo->prP2PInfo != NULL)
+			&& (prAdapter->prGlueInfo->prP2PInfo->prWdev != NULL)) {
+			if (prAdapter->prGlueInfo->prP2PInfo->prWdev->iftype == NL80211_IFTYPE_AP) {
+				COPY_MAC_ADDR(prP2pBssInfo->aucOwnMacAddr,
+					prAdapter->rWifiVar.aucInterfaceAddress[1]);
+			} else {
+				COPY_MAC_ADDR(prP2pBssInfo->aucOwnMacAddr,
+					prAdapter->rWifiVar.aucInterfaceAddress[0]);
+			}
+		} else {
+			DBGLOG(P2P, ERROR, " prGlueInfo || prP2PInfo || prWdev == NULLL\n");
+		}
 
 		/* For BSS_INFO back trace to P2P Role & get Role FSM. */
 		prP2pBssInfo->u4PrivateData = ucRoleIdx;

@@ -81,6 +81,13 @@
  *                             D A T A   T Y P E S
  *******************************************************************************
  */
+enum ENUM_OP_NOTIFY_STATE_T {
+	OP_NOTIFY_STATE_KEEP = 0, /* Won't change OP mode */
+	OP_NOTIFY_STATE_SENDING,  /* Sending OP notification frame */
+	OP_NOTIFY_STATE_SUCCESS,  /* OP notification Tx success */
+	OP_NOTIFY_STATE_FAIL,     /* OP notification Tx fail(over retry limit)*/
+	OP_NOTIFY_STATE_NUM
+};
 
 /*******************************************************************************
  *                            P U B L I C   D A T A
@@ -2165,8 +2172,7 @@ static uint8_t rlmRecIeInfoForClient(struct ADAPTER *prAdapter,
 #if CFG_SUPPORT_802_11AC
 	struct IE_VHT_OP *prVhtOp;
 	struct IE_VHT_CAP *prVhtCap = NULL;
-	struct IE_OP_MODE_NOTIFICATION
-		*prOPModeNotification; /* Operation Mode Notification */
+	struct IE_OP_MODE_NOTIFICATION *prOPNotif;
 	uint8_t fgHasOPModeIE = FALSE;
 	uint8_t fgHasNewOPModeIE = FALSE;
 	uint8_t ucVhtOpModeChannelWidth = 0;
@@ -2452,34 +2458,55 @@ static uint8_t rlmRecIeInfoForClient(struct ADAPTER *prAdapter,
 				    (sizeof(struct IE_OP_MODE_NOTIFICATION) -
 				     2))
 				break;
-			prOPModeNotification =
-				(struct IE_OP_MODE_NOTIFICATION *)pucIE;
+			prOPNotif = (struct IE_OP_MODE_NOTIFICATION *) pucIE;
 
-			if ((prOPModeNotification->ucOpMode &
-			     VHT_OP_MODE_RX_NSS_TYPE) !=
-			    VHT_OP_MODE_RX_NSS_TYPE) {
-				fgHasOPModeIE = TRUE;
-				if (prStaRec->ucVhtOpMode !=
-				    prOPModeNotification->ucOpMode) {
-					prStaRec->ucVhtOpMode =
-						prOPModeNotification->ucOpMode;
-					fgHasNewOPModeIE = TRUE;
-					ucVhtOpModeChannelWidth =
-						((prOPModeNotification
-							  ->ucOpMode) &
-						 VHT_OP_MODE_CHANNEL_WIDTH);
-					ucVhtOpModeRxNss =
-						((prOPModeNotification
-							  ->ucOpMode) &
-						 VHT_OP_MODE_RX_NSS) >>
-						VHT_OP_MODE_RX_NSS_OFFSET;
-				} else
-					/* Let the further flow not to update
-					 * VhtOpMode
-					 */
-					ucInitVhtOpMode = prStaRec->ucVhtOpMode;
+			/* NOTE: An AP always sets this field to 0,
+			 * so break it if this bit is set.
+			 */
+			if ((prOPNotif->ucOpMode & VHT_OP_MODE_RX_NSS_TYPE)
+			    == VHT_OP_MODE_RX_NSS_TYPE) {
+				break;
+			}
+			fgHasOPModeIE = TRUE;
+
+			/* Same OP mode, no need to update.
+			 * Let the further flow not to update VhtOpMode.
+			 */
+			if (prStaRec->ucVhtOpMode == prOPNotif->ucOpMode) {
+				ucInitVhtOpMode = prStaRec->ucVhtOpMode;
+				break;
 			}
 
+			fgHasNewOPModeIE = TRUE;
+			prStaRec->ucVhtOpMode = prOPNotif->ucOpMode;
+			ucVhtOpModeChannelWidth =
+				(prOPNotif->ucOpMode &
+				 VHT_OP_MODE_CHANNEL_WIDTH);
+			ucVhtOpModeRxNss =
+				(prOPNotif->ucOpMode & VHT_OP_MODE_RX_NSS)
+				>> VHT_OP_MODE_RX_NSS_OFFSET;
+
+			if (ucVhtOpModeRxNss == VHT_OP_MODE_NSS_2) {
+				prStaRec->u2VhtRxMcsMap = BITS(0, 15) &
+					(~(VHT_CAP_INFO_MCS_1SS_MASK |
+					VHT_CAP_INFO_MCS_2SS_MASK));
+
+				prStaRec->u2VhtRxMcsMap |=
+					(prStaRec->u2VhtRxMcsMapAssoc &
+					(VHT_CAP_INFO_MCS_1SS_MASK |
+					VHT_CAP_INFO_MCS_2SS_MASK));
+			} else {
+				prStaRec->u2VhtRxMcsMap = BITS(0, 15) &
+					(~VHT_CAP_INFO_MCS_1SS_MASK);
+
+				prStaRec->u2VhtRxMcsMap |=
+					(prStaRec->u2VhtRxMcsMapAssoc &
+					VHT_CAP_INFO_MCS_1SS_MASK);
+			}
+			DBGLOG(RLM, INFO,
+			       "NSS=%x RxMcsMap:0x%x, McsMapAssoc:0x%x\n",
+			       ucVhtOpModeRxNss, prStaRec->u2VhtRxMcsMap,
+			       prStaRec->u2VhtRxMcsMapAssoc);
 			break;
 #if CFG_SUPPORT_DFS
 		case ELEM_ID_WIDE_BAND_CHANNEL_SWITCH:
@@ -3676,6 +3703,36 @@ void rlmProcessVhtAction(struct ADAPTER *prAdapter, struct SW_RFB *prSwRfb)
 							prBssInfo);
 
 			/* 3. Update StaRec to FW */
+			/* As defined in spec, 11 means not support this MCS */
+			if (((prRxFrame->ucOperatingMode & VHT_OP_MODE_RX_NSS)
+				>> VHT_OP_MODE_RX_NSS_OFFSET) ==
+				VHT_OP_MODE_NSS_2) {
+				prStaRec->u2VhtRxMcsMap = BITS(0, 15) &
+					(~(VHT_CAP_INFO_MCS_1SS_MASK |
+					VHT_CAP_INFO_MCS_2SS_MASK));
+
+				prStaRec->u2VhtRxMcsMap |=
+					(prStaRec->u2VhtRxMcsMapAssoc &
+					(VHT_CAP_INFO_MCS_1SS_MASK |
+					VHT_CAP_INFO_MCS_2SS_MASK));
+				DBGLOG(RLM, INFO,
+				       "NSS=2 RxMcsMap:0x%x, McsMapAssoc:0x%x\n",
+				       prStaRec->u2VhtRxMcsMap,
+				       prStaRec->u2VhtRxMcsMapAssoc);
+
+			} else {
+				/* NSS = 1 or others */
+				prStaRec->u2VhtRxMcsMap = BITS(0, 15) &
+					(~VHT_CAP_INFO_MCS_1SS_MASK);
+
+				prStaRec->u2VhtRxMcsMap |=
+					(prStaRec->u2VhtRxMcsMapAssoc &
+					VHT_CAP_INFO_MCS_1SS_MASK);
+				DBGLOG(RLM, INFO,
+				       "NSS=1 RxMcsMap:0x%x, McsMapAssoc:0x%x\n",
+				       prStaRec->u2VhtRxMcsMap,
+				       prStaRec->u2VhtRxMcsMapAssoc);
+			}
 			cnmStaSendUpdateCmd(prAdapter, prStaRec, NULL, FALSE);
 
 			/* 4. Update BW parameters in BssInfo for STA mode only
@@ -4009,6 +4066,8 @@ void rlmProcessAssocReq(struct ADAPTER *prAdapter, struct SW_RFB *prSwRfb,
 
 			prStaRec->u2VhtRxMcsMap =
 				prVhtCap->rVhtSupportedMcsSet.u2RxMcsMap;
+			prStaRec->u2VhtRxMcsMapAssoc =
+				prStaRec->u2VhtRxMcsMap;
 
 			prStaRec->u2VhtRxHighestSupportedDataRate =
 				prVhtCap->rVhtSupportedMcsSet

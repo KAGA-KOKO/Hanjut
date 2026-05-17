@@ -107,6 +107,7 @@ const UINT_8 aucWmmAC2TcResourceSet2[WMM_AC_INDEX_NUM] = {
 static UINT_16 arpMoniter;
 static UINT_8 apIp[4];
 static UINT_8 gatewayIp[4];
+static UINT_64 last_rx_packets, latest_rx_packets;
 #endif
 
 /*******************************************************************************
@@ -6303,9 +6304,29 @@ VOID qmDetectArpNoResponse(P_ADAPTER_T prAdapter, P_MSDU_INFO_T prMsduInfo)
 	PUINT_8 pucData = NULL;
 	UINT_16 u2EtherType = 0;
 	int arpOpCode = 0;
+	P_WIFI_VAR_T prWifiVar = NULL;
+	uint32_t uArpMonitorNumber;
+	uint32_t uArpMonitorRxPktNum;
+	struct net_device *prNetDev = NULL;
+	P_GLUE_INFO_T prGlueInfo = NULL;
 
 	ASSERT(prAdapter);
 	ASSERT(prMsduInfo);
+
+	if (!prAdapter ||
+		!prAdapter->prGlueInfo ||
+		!prAdapter->prGlueInfo->prDevHandler) {
+		DBGLOG(QM, WARN, "Param is invalid\n");
+		return;
+	}
+	prGlueInfo = prAdapter->prGlueInfo;
+	prNetDev = prGlueInfo->prDevHandler;
+	prWifiVar = &prAdapter->rWifiVar;
+	uArpMonitorNumber = prWifiVar->uArpMonitorNumber;
+	uArpMonitorRxPktNum = prWifiVar->uArpMonitorRxPktNum;
+
+	if (uArpMonitorNumber == 0)
+		return;
 
 	prSkb = (struct sk_buff *)prMsduInfo->prPacket;
 
@@ -6327,12 +6348,26 @@ VOID qmDetectArpNoResponse(P_ADAPTER_T prAdapter, P_MSDU_INFO_T prMsduInfo)
 	arpOpCode = (pucData[ETH_TYPE_LEN_OFFSET + 8] << 8) | (pucData[ETH_TYPE_LEN_OFFSET + 8 + 1]);
 	if (arpOpCode == ARP_PRO_REQ) {
 		arpMoniter++;
-		if (arpMoniter > 20) {
-			DBGLOG(INIT, WARN, "IOT Critical issue, arp no resp, check AP!\n");
-			if (prAdapter->prAisBssInfo)
-				prAdapter->prAisBssInfo->u2DeauthReason = BEACON_TIMEOUT_DUE_2_APR_NO_RESPONSE;
-			kalSetResetConnEvent(prAdapter->prGlueInfo);
+		/* Record counts of RX Packets when Tx 1st ARP Req */
+		if (!last_rx_packets) {
+			last_rx_packets = prNetDev->stats.rx_packets;
+			latest_rx_packets = 0;
+			}
+		/* Record counts of RX Packets when TX ARP Req recently */
+		latest_rx_packets = prNetDev->stats.rx_packets;
+
+		if (arpMoniter > uArpMonitorNumber) {
+			if ((latest_rx_packets - last_rx_packets) <= uArpMonitorRxPktNum) {
+				DBGLOG(INIT, WARN, "IOT Critical issue, arp no resp, check AP!\n");
+				if (prAdapter->prAisBssInfo)
+					prAdapter->prAisBssInfo->u2DeauthReason = BEACON_TIMEOUT_DUE_2_APR_NO_RESPONSE;
+				kalSetResetConnEvent(prAdapter->prGlueInfo);
+			} else
+				DBGLOG(INIT, WARN, "ARP no resp, But still have %d packets\n",
+					latest_rx_packets - last_rx_packets);
 			arpMoniter = 0;
+			last_rx_packets = 0;
+			latest_rx_packets = 0;
 			kalMemZero(apIp, sizeof(apIp));
 		}
 	}
@@ -6463,6 +6498,8 @@ VOID qmHandleRxDhcpPackets(P_ADAPTER_T prAdapter, P_SW_RFB_T prSwRfb)
 VOID qmResetArpDetect(VOID)
 {
 	arpMoniter = 0;
+	last_rx_packets = 0;
+	latest_rx_packets = 0;
 	kalMemZero(apIp, sizeof(apIp));
 	kalMemZero(gatewayIp, sizeof(gatewayIp));
 }

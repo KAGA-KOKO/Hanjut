@@ -4957,7 +4957,7 @@ int kalExternalAuthRequest(IN P_ADAPTER_T prAdapter)
 	       (uint8_t) ((params.key_mgmt_suite >> 8) & 0x000000FF),
 	       (uint8_t) ((params.key_mgmt_suite >> 16) & 0x000000FF),
 	       (uint8_t) ((params.key_mgmt_suite >> 24) & 0x000000FF));
-	return -EOPNOTSUPP;
+	return cfg80211_external_auth_request(ndev, &params, GFP_KERNEL);
 }
 #endif
 

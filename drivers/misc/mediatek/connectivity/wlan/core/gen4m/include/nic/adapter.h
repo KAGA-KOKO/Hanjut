@@ -443,7 +443,7 @@ struct BSS_INFO {
 
 	PFN_OPMODE_NOTIFY_DONE_FUNC pfOpChangeHandler;
 
-	enum ENUM_OP_NOTIFY_STATE_T aucOpModeChangeState[OP_NOTIFY_TYPE_NUM];
+	uint8_t aucOpModeChangeState[OP_NOTIFY_TYPE_NUM];
 
 	uint8_t aucOpModeChangeRetryCnt[OP_NOTIFY_TYPE_NUM];
 
@@ -1064,6 +1064,9 @@ struct WIFI_VAR {
 	uint8_t au2TxOp[WMM_AC_INDEX_NUM];
 
 	uint8_t ucMsduReportTimeout;
+#if (CFG_SUPPORT_P2PGO_ACS == 1)
+	uint8_t ucP2pGoACS;
+#endif
 };
 
 /* cnm_timer module */

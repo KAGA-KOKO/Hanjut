@@ -551,6 +551,10 @@ u_int8_t aisFsmInsertRequest(IN struct ADAPTER *prAdapter,
 			     IN enum ENUM_AIS_REQUEST_TYPE eReqType,
 			     IN uint8_t ucBssIndex);
 
+u_int8_t aisFsmInsertRequestToHead(IN struct ADAPTER *prAdapter,
+			     IN enum ENUM_AIS_REQUEST_TYPE eReqType,
+			     IN uint8_t ucBssIndex);
+
 void aisFsmFlushRequest(IN struct ADAPTER *prAdapter,
 				IN uint8_t ucBssIndex);
 

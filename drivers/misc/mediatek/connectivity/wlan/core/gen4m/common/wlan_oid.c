@@ -93,6 +93,53 @@ struct PARAM_CUSTOM_KEY_CFG_STRUCT g_rDefaulteSetting[] = {
 	/*format :
 	 *: {"firmware config parameter", "firmware config value"}
 	 */
+
+	#ifdef VENDOR_EDIT
+	//James.Wang@PSW.CN.WiFi.Network.dl_speed.1115135, 2019/01/15,
+	//add for: [ modify Cw/TxOp param to compatible with gen4m]
+	{"WmmParamCwMax", "3"},
+	{"WmmParamCwMin", "3"},
+	{"WmmParamAifsN", "2"},
+	{"WmmParamCfgEn", "1"},
+	{"Cert11gModeEnable", "0"},
+	#endif /* VENDOR_EDIT */
+    #ifdef VENDOR_EDIT
+    //Wenkan.Zhu@PSW.CN.Wifi.Network.performance.1853894, 2019/03/19
+    //Add for modify mccP2pGc time
+    {"MccP2pGcQuotaTimeInUs", "300000"},
+    #endif /* VENDOR_EDIT */
+
+#ifdef VENDOR_EDIT
+	//ChuanYe.Xu@PSW.CN.Wifi.Hardware.Power.917292, 2017/02/17,
+	//Add for: filter SSDP packets
+	{"DropPacketsIPV4Low", "0x12DE"},
+	{"DropPacketsIPV4High", "0x0"},
+
+	//Add for: filter IPV6 multicast packets
+	{"DropPacketsIPV6Low", "0x2"},
+	{"DropPacketsIPV6High", "0x0"},
+
+	//ChuanYe.Xu@PSW.CN.WiFi.Basic, 2019/04/04,
+	//Add for: 2.4G mask invalid issue
+	{"2GTxMaskDPDOn", "1"},
+	{"2GTxPMinus1dbAtHighTemp", "1"},
+	{"TssiGroupBackupRestore", "1"},
+#endif /* VENDOR_EDIT */
+
+#ifdef VENDOR_EDIT
+	//Shixing.Ke@PSW.CN.Wifi.Connect.connect,2002137, 2019/05/11,
+	//Add for add beacon to 10+10 before disconnect to avoid multiple disconnect
+	{"ScreenOnBeaconTimeoutCount", "10"},
+        //Add for check if any data at the last 2s,if has then not disconnect
+        {"BeaconTimoutFilterDurationMs","2000"},
+#endif /* VENDOR_EDIT */
+#ifdef VENDOR_EDIT
+	//qiu.lei@PSW.CN.Wifi.Hardware.Power.NA, 2018/11/02,
+	//Add for CCA for CE
+	{"EdccaTh5gBw20", "0xFFB9"},
+	{"EdccaTh5gBw40", "0xFFBB"},
+	{"EdccaTh5gBw80", "0xFFBF"},
+#endif /* VENDOR_EDIT */
 	{"AdapScan", "0x0"},
 	/*IOT AP, Ralink/MTK AP*/
 	{"IOTAP27", "80:000c43:::::2::1:1"},
@@ -2670,6 +2717,10 @@ wlanoidSetAddKey(IN struct ADAPTER *prAdapter, IN void *pvSetBuffer,
 			     "[wlan] Not set the peer key while disconnect\n");
 			return WLAN_STATUS_SUCCESS;
 		}
+#if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
+		/* clear fragment cache when rekey */
+		nicRxClearFrag(prAdapter, prStaRec);
+#endif /* CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION */
 	}
 	prCmdInfo = cmdBufAllocateCmdInfo(prAdapter,
 				(CMD_HDR_SIZE + sizeof(struct CMD_802_11_KEY)));
@@ -7918,10 +7969,15 @@ wlanoidRssiMonitor(IN struct ADAPTER *prAdapter,
 		rRssi.min_rssi_value = 0;
 	}
 
+    //#ifdef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
+    /*
 	DBGLOG(OID, INFO,
 	       "enable=%d, max_rssi_value=%d, min_rssi_value=%d, orig_max_rssi_value=%d, orig_min_rssi_value=%d\n",
 	       rRssi.enable, rRssi.max_rssi_value, rRssi.min_rssi_value,
 	       orig_max_rssi_value, orig_min_rssi_value);
+    */
+    //#endif /* ODM_WT_EDIT */
 
 	/*
 	 * If status == WLAN_STATUS_ADAPTER_NOT_READY
@@ -12984,7 +13040,9 @@ wlanoidQueryWlanInfo(IN struct ADAPTER *prAdapter,
 		     IN uint32_t u4QueryBufferLen,
 		     OUT uint32_t *pu4QueryInfoLen)
 {
+#ifndef VENDOR_EDIT
 	DEBUGFUNC("wlanoidQueryWlanInfo");
+#endif
 
 	return wlanQueryWlanInfo(prAdapter, pvQueryBuffer, u4QueryBufferLen,
 				 pu4QueryInfoLen, TRUE);
@@ -12999,8 +13057,10 @@ wlanQueryWlanInfo(IN struct ADAPTER *prAdapter,
 {
 	struct PARAM_HW_WLAN_INFO *prHwWlanInfo;
 
+#ifndef VENDOR_EDIT
 	DEBUGFUNC("wlanQueryWlanInfo");
 	DBGLOG(REQ, LOUD, "\n");
+#endif
 
 	ASSERT(prAdapter);
 	if (u4QueryBufferLen)
@@ -13021,7 +13081,11 @@ wlanQueryWlanInfo(IN struct ADAPTER *prAdapter,
 	}
 
 	prHwWlanInfo = (struct PARAM_HW_WLAN_INFO *)pvQueryBuffer;
-	DBGLOG(RSN, INFO, "index = %d\n", prHwWlanInfo->u4Index);
+
+    //#ifdef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
+	//DBGLOG(RSN, INFO, "index = %d\n", prHwWlanInfo->u4Index);
+    //#endif /* ODM_WT_EDIT */
 
 	/*  *pu4QueryInfoLen = 8 + prRxStatistics->u4TotalNum; */
 
@@ -13043,7 +13107,9 @@ wlanoidQueryMibInfo(IN struct ADAPTER *prAdapter,
 		    IN void *pvQueryBuffer, IN uint32_t u4QueryBufferLen,
 		    OUT uint32_t *pu4QueryInfoLen)
 {
+#ifndef VENDOR_EDIT
 	DEBUGFUNC("wlanoidQueryMibInfo");
+#endif
 
 	return wlanQueryMibInfo(prAdapter, pvQueryBuffer, u4QueryBufferLen,
 				pu4QueryInfoLen, TRUE);
@@ -13057,9 +13123,10 @@ wlanQueryMibInfo(IN struct ADAPTER *prAdapter,
 		 IN uint8_t fgIsOid)
 {
 	struct PARAM_HW_MIB_INFO *prHwMibInfo;
-
+#ifndef VENDOR_EDIT
 	DEBUGFUNC("wlanoidQueryMibInfo");
 	DBGLOG(REQ, LOUD, "\n");
+#endif
 
 	ASSERT(prAdapter);
 	if (u4QueryBufferLen)
@@ -13080,7 +13147,11 @@ wlanQueryMibInfo(IN struct ADAPTER *prAdapter,
 	}
 
 	prHwMibInfo = (struct PARAM_HW_MIB_INFO *)pvQueryBuffer;
-	DBGLOG(RSN, INFO, "index = %d\n", prHwMibInfo->u4Index);
+
+    //#ifdef ODM_WT_EDIT
+    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
+	//DBGLOG(RSN, INFO, "index = %d\n", prHwMibInfo->u4Index);
+    //#endif /* ODM_WT_EDIT */
 
 	/* *pu4QueryInfoLen = 8 + prRxStatistics->u4TotalNum; */
 
@@ -16203,3 +16274,40 @@ wlanoidExternalAuthDone(IN struct ADAPTER *prAdapter,
 
 	return WLAN_STATUS_SUCCESS;
 }
+
+uint32_t
+wlanoidIndicateBssInfo(IN struct ADAPTER *prAdapter,
+			   IN void *pvSetBuffer, IN uint32_t u4SetBufferLen,
+			   OUT uint32_t *pu4SetInfoLen)
+{
+	struct GLUE_INFO *prGlueInfo;
+	struct BSS_DESC **pprBssDesc = NULL;
+	uint32_t rStatus = WLAN_STATUS_SUCCESS;
+	uint8_t i = 0;
+
+	DEBUGFUNC("wlanoidIndicateBssInfo");
+
+	ASSERT(prAdapter);
+
+	prGlueInfo = prAdapter->prGlueInfo;
+	pprBssDesc = &prAdapter->rWifiVar.rScanInfo.rSchedScanParam.
+		     aprPendingBssDescToInd[0];
+
+	for (; i < SCN_SSID_MATCH_MAX_NUM; i++) {
+		if (pprBssDesc[i] == NULL)
+			break;
+		if (pprBssDesc[i]->u2RawLength == 0)
+			continue;
+		kalIndicateBssInfo(prGlueInfo,
+				   (uint8_t *) pprBssDesc[i]->aucRawBuf,
+				   pprBssDesc[i]->u2RawLength,
+				   pprBssDesc[i]->ucChannelNum,
+				   RCPI_TO_dBm(pprBssDesc[i]->ucRCPI));
+	}
+	DBGLOG(SCN, INFO, "pending %d sched scan results\n", i);
+	if (i > 0)
+		kalMemZero(&pprBssDesc[0], i * sizeof(struct BSS_DESC *));
+
+	return rStatus;
+}	/* wlanoidIndicateBssInfo */
+

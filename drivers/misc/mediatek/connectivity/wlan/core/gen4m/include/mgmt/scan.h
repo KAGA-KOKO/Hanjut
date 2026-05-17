@@ -108,12 +108,8 @@
 #if 1
 #define SCN_BSS_DESC_REMOVE_TIMEOUT_SEC		30
 #define SCN_BSS_DESC_STALE_SEC			20 /* Scan Request Timeout */
-#if CFG_ENABLE_WIFI_DIRECT
-#if CFG_SUPPORT_WFD
 /* For WFD scan need about 15s. */
-#define SCN_BSS_DESC_STALE_SEC_WFD		20
-#endif
-#endif
+#define SCN_BSS_DESC_STALE_SEC_WFD		30
 
 #else
 /* Second. This is used by POLICY TIMEOUT, If exceed this
@@ -897,7 +893,8 @@ void scanLogCacheAddBSS(struct LINK *prList,
 	uint8_t bssId[], uint16_t seq);
 void scanLogCacheFlushBSS(struct LINK *prList, enum ENUM_SCAN_LOG_PREFIX prefix,
 	const uint16_t logBufLen);
-void scanLogCacheFlushAll(struct SCAN_LOG_CACHE *prScanLogCache,
+void scanLogCacheFlushAll(struct ADAPTER *prAdapter,
+	struct SCAN_LOG_CACHE *prScanLogCache,
 	enum ENUM_SCAN_LOG_PREFIX prefix, const uint16_t logBufLen);
 
 void scanRemoveBssDescFromList(IN struct LINK *prBSSDescList,

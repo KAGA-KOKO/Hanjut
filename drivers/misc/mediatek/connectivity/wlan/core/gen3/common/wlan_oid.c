@@ -4141,6 +4141,43 @@ wlanoidQueryCurrentAddr(IN P_ADAPTER_T prAdapter,
 	return WLAN_STATUS_SUCCESS;
 }				/* wlanoidQueryCurrentAddr */
 
+#if CFG_SUPPORT_ANT_SWAP
+/*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to query antenna swap capability..
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
+/*----------------------------------------------------------------------------*/
+WLAN_STATUS
+wlanoidQueryAntSwapCapability(IN P_ADAPTER_T prAdapter,
+			IN PVOID pvQueryBuffer, IN UINT_32 u4QueryBufferLen, OUT PUINT_32 pu4QueryInfoLen)
+{
+	DEBUGFUNC("wlanoidQueryAntSwapCapability");
+
+	ASSERT(prAdapter);
+	ASSERT(pu4QueryInfoLen);
+	if (u4QueryBufferLen)
+		ASSERT(pvQueryBuffer);
+
+	*((PUINT32)pvQueryBuffer) = (UINT_32)prAdapter->fgIsAntSwpSupport;
+	*pu4QueryInfoLen = sizeof(UINT_32);
+
+	DBGLOG(INIT, TRACE, "AntSwapCapability Query(%u)-len(%u)\n",
+		*((PUINT32)pvQueryBuffer), *pu4QueryInfoLen);
+
+	return WLAN_STATUS_SUCCESS;
+} /* wlanoidQueryAntSwapCapability */
+#endif
+
 /*----------------------------------------------------------------------------*/
 /*! \brief  This routine is called to query NIC link speed.
 *
@@ -8125,6 +8162,10 @@ wlanoidRftestSetAutoTest(IN P_ADAPTER_T prAdapter,
 	}
 
 	prRfATInfo = (P_PARAM_MTK_WIFI_TEST_STRUCT_T) pvSetBuffer;
+
+	DBGLOG(OID, TRACE, "u4FuncIndex(%u)-u4FuncData(%u)\n",
+		prRfATInfo->u4FuncIndex, prRfATInfo->u4FuncData);
+
 	rStatus = rftestSetATInfo(prAdapter, prRfATInfo->u4FuncIndex, prRfATInfo->u4FuncData);
 
 	return rStatus;
@@ -12639,6 +12680,12 @@ wlanoidSetP2pRandomMac(P_ADAPTER_T prAdapter, void *pvSetBuffer,
 		return WLAN_STATUS_FAILURE;
 	}
 
+	if ((prAdapter->prGlueInfo->prP2PInfo  == NULL)
+		|| (prAdapter->prGlueInfo->prP2PInfo->prWdev == NULL)) {
+		DBGLOG(OID, WARN, "(prP2PInfo == NULL) || (prWdev == NULL)\n");
+		return WLAN_STATUS_FAILURE;
+	}
+
 	/* 1. update dev bss*/
 	COPY_MAC_ADDR(prDevBssInfo->aucOwnMacAddr,
 		(PUINT_8)pvSetBuffer);
@@ -12651,13 +12698,16 @@ wlanoidSetP2pRandomMac(P_ADAPTER_T prAdapter, void *pvSetBuffer,
 	COPY_MAC_ADDR(prGlueInfo->prP2PInfo->prDevHandler->dev_addr,
 		(PUINT_8)pvSetBuffer);
 
-	/* 4. update dev addr in wifivar*/
-	COPY_MAC_ADDR(prAdapter->rWifiVar.aucDeviceAddress,
+	/* 4. update interface and dev addr in wifivar*/
+	if (prAdapter->prGlueInfo->prP2PInfo->prWdev->iftype == NL80211_IFTYPE_AP) {
+		COPY_MAC_ADDR(prAdapter->rWifiVar.aucInterfaceAddress[1],
 			(PUINT_8)pvSetBuffer);
-
-	/* 5. update interface addr in wifivar*/
-	COPY_MAC_ADDR(prAdapter->rWifiVar.aucInterfaceAddress,
-		(PUINT_8)pvSetBuffer);
+	} else {
+		COPY_MAC_ADDR(prAdapter->rWifiVar.aucInterfaceAddress[0],
+			(PUINT_8)pvSetBuffer);
+		COPY_MAC_ADDR(prAdapter->rWifiVar.aucDeviceAddress,
+			(PUINT_8)pvSetBuffer);
+	}
 
 	DBGLOG(OID, INFO, "Done, Set p2p random mac to"MACSTR"\n",
 		MAC2STR((PUINT_8)pvSetBuffer));

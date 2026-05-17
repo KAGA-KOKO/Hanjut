@@ -4524,7 +4524,7 @@ int kalExternalAuthRequest(IN struct _ADAPTER_T *prAdapter,
 	DBGLOG(AIS, INFO, "[WPA3] "MACSTR" SSID:%s Len:%d Act:%d",
 		   params.bssid, params.ssid.ssid,
 		   params.ssid.ssid_len, params.action);
-	return -EOPNOTSUPP;
+	return cfg80211_external_auth_request(ndev, &params, GFP_KERNEL);
 #else
 	return WLAN_STATUS_NOT_SUPPORTED;
 #endif
