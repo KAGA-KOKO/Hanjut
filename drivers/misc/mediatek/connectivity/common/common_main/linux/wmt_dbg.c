@@ -135,7 +135,6 @@ static INT32 wmt_dbg_step_ctrl(INT32 par1, INT32 par2, INT32 par3);
 
 static INT32 wmt_dbg_gps_suspend(INT32 par1, INT32 par2, INT32 par3);
 static INT32 wmt_dbg_set_bt_link_status(INT32 par1, INT32 par2, INT32 par3);
-static INT32 wmt_dbg_set_bt_rssi(INT32 par1, INT32 par2, INT32 par3);
 
 static const WMT_DEV_DBG_FUNC wmt_dev_dbg_func[] = {
 	[0x0] = wmt_dbg_psm_ctrl,
@@ -199,7 +198,6 @@ static const WMT_DEV_DBG_FUNC wmt_dev_dbg_func[] = {
 #ifdef CONFIG_MTK_ENG_BUILD
 	[0xa0] = wmt_dbg_step_test,
 #endif
-	[0xa1] = wmt_dbg_set_bt_rssi,
 };
 
 static VOID wmt_dbg_fwinfor_print_buff(UINT32 len)
@@ -375,7 +373,7 @@ INT32 wmt_dbg_cmd_test_api(ENUM_WMTDRV_CMD_T cmd)
 		pOp->op.au4OpData[3] = osal_sizeof(gCoexBuf.buffer);
 		break;
 	}
-	WMT_INFO_FUNC("CMD_TEST, opid(%d), par(%lu, %lu)\n", pOp->op.opId, pOp->op.au4OpData[0],
+	WMT_INFO_FUNC("CMD_TEST, opid(%d), par(%zu, %zu)\n", pOp->op.opId, pOp->op.au4OpData[0],
 		      pOp->op.au4OpData[1]);
 	/*wake up chip first */
 	if (DISABLE_PSM_MONITOR()) {
@@ -398,7 +396,7 @@ INT32 wmt_dbg_cmd_test_api(ENUM_WMTDRV_CMD_T cmd)
 		}
 	}
 	/* wmt_lib_host_awake_put(); */
-	WMT_INFO_FUNC("CMD_TEST, opid (%d), par(%lu, %lu), ret(%d), result(%s)\n",
+	WMT_INFO_FUNC("CMD_TEST, opid (%d), par(%zu, %zu), ret(%d), result(%s)\n",
 		      pOp->op.opId,
 		      pOp->op.au4OpData[0],
 		      pOp->op.au4OpData[1],
@@ -755,12 +753,6 @@ static INT32 wmt_dbg_set_bt_link_status(INT32 par1, INT32 par2, INT32 par3)
 		return 0;
 
 	wmt_lib_set_bt_link_status(par2, par3);
-	return 0;
-}
-
-static INT32 wmt_dbg_set_bt_rssi(INT32 par1, INT32 par2, INT32 par3)
-{
-	wmt_set_bt_tssi_target(par2);
 	return 0;
 }
 
@@ -1543,8 +1535,7 @@ ssize_t wmt_dbg_write(struct file *filp, const char __user *buffer, size_t count
 	 * 0x2e: enable catch connsys log
 	 * 0x2f: set bt link status
 	 */
-	if (0 == dbgEnabled && 0x15 != x && 0x2e != x && 0x2f != x && 0x7 != x
-                && 0xa1 != x) {
+	if (0 == dbgEnabled && 0x15 != x && 0x2e != x && 0x2f != x && 0x7 != x) {
 		WMT_INFO_FUNC("please enable WMT debug first\n\r");
 		return len;
 	}

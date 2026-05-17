@@ -112,7 +112,7 @@
 
 /* Android build-in driver switch, Mike 2016/11/11*/
 #ifndef CFG_BUILT_IN_DRIVER
-#define CFG_BUILT_IN_DRIVER         0
+#define CFG_BUILT_IN_DRIVER         1
 #endif
 
 /* Mike 2016/09/01 ALPS update K3.18 80211_disconnect to K4.4 version*/
@@ -159,12 +159,7 @@
 #endif
 
 #ifndef CFG_SUPPORT_PERF_IND
-#ifdef VENDOR_EDIT
-//Xiao.Liang@PSW.CN.WiFi.Basic.Custom.2625617, 2019/11/26, add for LTE&WIFI Co-ex RSSI feature
-#define CFG_SUPPORT_PERF_IND            1
-#else
 #define CFG_SUPPORT_PERF_IND            0
-#endif /* VENDOR_EDIT */
 #endif
 
 /* Support AP Selection */
@@ -248,9 +243,6 @@
 
 /* Enable A-MSDU RX Reordering Support */
 #define CFG_SUPPORT_RX_AMSDU	1
-
-/* Enable Detection for 2021 Frag/AGG Attack from WFA */
-#define CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION 1
 
 /* Enable Android wake_lock operations */
 #ifndef CFG_ENABLE_WAKE_LOCK
@@ -517,7 +509,6 @@
 
 /* debug which packet wake up host */
 #define CFG_SUPPORT_WAKEUP_REASON_DEBUG         1
-#define CFG_MODIFY_TX_POWER_BY_BAT_VOLT         0
 #define CFG_SUPPORT_WAKEUP_COUNT                0
 
 #define CFG_INIT_POWER_SAVE_PROF		ENUM_PSP_FAST_SWITCH
@@ -543,15 +534,9 @@
  *------------------------------------------------------------------------------
  */
 /* ARRAY_SIZE(mtk_5ghz_channels) + ARRAY_SIZE(mtk_2ghz_channels) */
-#ifndef VENDOR_EDIT
-//Pan.Zhang@PSW.CN.WiFi.Basic.SoftAP.1153775, 2018/01/17,
-//Modify for set softap max 2.4G band 11 channel.
 #define MAX_CHN_NUM			39
-#define MAX_2G_BAND_CHN_NUM                     14
-#else /* VENDOR_EDIT */
-#define MAX_CHN_NUM			36
-#define MAX_2G_BAND_CHN_NUM                     11
-#endif /* VENDOR_EDIT */
+
+#define MAX_2G_BAND_CHN_NUM		14
 #define MAX_5G_BAND_CHN_NUM		(MAX_CHN_NUM - MAX_2G_BAND_CHN_NUM)
 #define ACS_PRINT_BUFFER_LEN		200
 
@@ -1221,27 +1206,11 @@
 #define CFG_SUPPORT_P2P_PREFERRED_FREQ_LIST  1
 
 /*------------------------------------------------------------------------------
- * Flag used for P2P GO to find the best channel list
- * Value 0: Disable
- * Value 1: Enable
- * Note: Must Enable CFG_SUPPORT_P2P_PREFERRED_FREQ_LIST in advance
- *------------------------------------------------------------------------------
- */
-#define CFG_SUPPORT_P2PGO_ACS 1
-
-/*------------------------------------------------------------------------------
  * Driver supports reporting max tx rate instead of current tx rate
  * in mtk_cfg80211_get_station
  *------------------------------------------------------------------------------
  */
 /* #define CFG_REPORT_MAX_TX_RATE */
-#ifndef VENDOR_EDIT
-//Chuanye.Xu@PSW.CN.WiFi.Connect.config.2432753, 2019/10/16,
-//Modify for show max tx rate
-#define CFG_REPORT_MAX_TX_RATE	0
-#else /* VENDOR_EDIT */
-#define CFG_REPORT_MAX_TX_RATE	1
-#endif /* VENDOR_EDIT */
 
 /*------------------------------------------------------------------------------
  * Link Quality Monitor

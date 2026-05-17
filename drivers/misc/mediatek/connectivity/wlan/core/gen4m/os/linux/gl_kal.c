@@ -80,9 +80,6 @@
 #if CFG_SUPPORT_AGPS_ASSIST
 #include <net/netlink.h>
 #endif
-#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
-#include "pmic_lbat_service.h"
-#endif
 
 /*******************************************************************************
  *                              C O N S T A N T S
@@ -124,13 +121,8 @@ static struct KAL_HALT_CTRL_T rHaltCtrl = {
 };
 /* framebuffer callback related variable and status flag */
 u_int8_t wlan_fb_power_down = FALSE;
-#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
-void *wlan_bat_volt_notifier_priv_data;
-unsigned int wlan_bat_volt;
-bool fgIsTxPowerDecreased = FALSE;
-#endif
 
-#if (CFG_FORCE_ENABLE_PERF_MONITOR == 1)
+#if (CFG_FORCE_ENABLE_PERF_MONITOR == 1) || (CFG_SUPPORT_PERF_IND == 1)
 u_int8_t wlan_perf_monitor_force_enable = TRUE;
 #else
 u_int8_t wlan_perf_monitor_force_enable = FALSE;
@@ -6924,9 +6916,6 @@ void kalSetPerfReport(IN struct ADAPTER *prAdapter)
 			prCmdPerfReport->ulCurRxBytes[i]);
 	}
 	if (u4CurrentTp != 0) {
-        //#ifdef ODM_WT_EDIT
-        //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
-        /*
 		DBGLOG(SW4, INFO,
 			"Total TP[%d] TX-Byte[%d][%d][%d][%d],RX-Byte[%d][%d][%d][%d]\n",
 			u4CurrentTp,
@@ -6948,8 +6937,6 @@ void kalSetPerfReport(IN struct ADAPTER *prAdapter)
 			prCmdPerfReport->ucCurRxRCPI0[1],
 			prCmdPerfReport->ucCurRxRCPI0[2],
 			prCmdPerfReport->ucCurRxRCPI0[3]);
-        */
-        //#endif /* ODM_WT_EDIT */
 
 		wlanSendSetQueryCmd(prAdapter,
 			CMD_ID_PERF_IND,
@@ -7067,10 +7054,7 @@ inline int32_t kalPerMonStart(IN struct GLUE_INFO
 	KAL_SET_BIT(PERF_MON_RUNNING_BIT,
 		    prPerMonitor->ulPerfMonFlag);
 	KAL_CLR_BIT(PERF_MON_STOP_BIT, prPerMonitor->ulPerfMonFlag);
-    //#ifndef ODM_WT_EDIT
-    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2020/01/08, Modify for reduce reduce wifi kernel log print.
-	DBGLOG(SW4, TRACE, "perf monitor started\n");
-    //#endif /* ODM_WT_EDIT */
+	DBGLOG(SW4, INFO, "perf monitor started\n");
 	return 0;
 }
 
@@ -7234,9 +7218,7 @@ void kalPerMonHandler(IN struct ADAPTER *prAdapter,
 	prPerMonitor->ulThroughput <<= 3;
 
 	/* TODO: how to remove hard code [0..3] */
-    //#ifndef VENDOR_EDIT
-    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2020/01/08, Modify for reduce wifi kernel log print.
-	DBGLOG(SW4, TRACE,
+	DBGLOG(SW4, INFO,
 		"Tput: %llu > [%ld][%ld] [%ld][%ld] [%ld][%ld] [%ld][%d],Pending[%d], Used[%d] PER[%ld %ld]\n",
 		prPerMonitor->ulThroughput,
 		txDiffBytes[0], rxDiffBytes[0],
@@ -7247,7 +7229,6 @@ void kalPerMonHandler(IN struct ADAPTER *prAdapter,
 		GLUE_GET_REF_CNT(prPerMonitor->u4UsedCnt),
 		prPerMonitor->ulTotalTxSuccessCount,
 		prPerMonitor->ulTotalTxFailCount);
-    //#endif /*VENDOR_EDIT*/
 
 #if CFG_SUPPORT_DATA_STALL
 		/* test mode event */
@@ -7703,28 +7684,20 @@ void kalScanReqLog(struct cfg80211_scan_request *request)
 
 void kalScanResultLog(struct ADAPTER *prAdapter, struct ieee80211_mgmt *mgmt)
 {
-	KAL_SPIN_LOCK_DECLARATION();
-
-	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_CFG);
 	scanLogCacheAddBSS(
 		&(prAdapter->rWifiVar.rScanInfo.rScanLogCache.rBSSListCFG),
 		prAdapter->rWifiVar.rScanInfo.rScanLogCache.arBSSListBufCFG,
 		LOG_SCAN_RESULT_D2K,
 		mgmt->bssid,
 		mgmt->seq_ctrl);
-	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_CFG);
 }
 
 void kalScanLogCacheFlushBSS(struct ADAPTER *prAdapter,
 	const uint16_t logBufLen)
 {
-	KAL_SPIN_LOCK_DECLARATION();
-
-	KAL_ACQUIRE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_CFG);
 	scanLogCacheFlushBSS(
 		&(prAdapter->rWifiVar.rScanInfo.rScanLogCache.rBSSListCFG),
 		LOG_SCAN_DONE_D2K, logBufLen);
-	KAL_RELEASE_SPIN_LOCK(prAdapter, SPIN_LOCK_BSSLIST_CFG);
 }
 
 int kalMaskMemCmp(const void *cs, const void *ct,
@@ -7843,41 +7816,10 @@ kalChannelFormatSwitch(IN struct cfg80211_chan_def *channel_def,
 }
 
 int kalExternalAuthRequest(IN struct ADAPTER *prAdapter,
-				   IN uint8_t uBssIndex)
+                           IN uint8_t uBssIndex)
 {
-	struct cfg80211_external_auth_params params;
-	struct AIS_FSM_INFO *prAisFsmInfo = NULL;
-	struct BSS_DESC *prBssDesc = NULL;
-	struct net_device *ndev = NULL;
-
-	prAisFsmInfo = aisGetAisFsmInfo(prAdapter, uBssIndex);
-	if (!prAisFsmInfo) {
-		DBGLOG(SAA, WARN,
-		       "SAE auth failed with NULL prAisFsmInfo\n");
-		return WLAN_STATUS_INVALID_DATA;
-	}
-
-	prBssDesc = prAisFsmInfo->prTargetBssDesc;
-	if (!prBssDesc) {
-		DBGLOG(SAA, WARN,
-		       "SAE auth failed without prTargetBssDesc\n");
-		return WLAN_STATUS_INVALID_DATA;
-	}
-
-	ndev = prAdapter->prGlueInfo->prDevHandler;
-	params.action = NL80211_EXTERNAL_AUTH_START;
-	COPY_MAC_ADDR(params.bssid, prBssDesc->aucBSSID);
-	COPY_SSID(params.ssid.ssid, params.ssid.ssid_len,
-		  prBssDesc->aucSSID, prBssDesc->ucSSIDLen);
-	params.key_mgmt_suite = RSN_CIPHER_SUITE_SAE;
-	DBGLOG(AIS, INFO, "[WPA3] "MACSTR" %s %d %d %02x-%02x-%02x-%02x",
-	       params.bssid, params.ssid.ssid,
-	       params.ssid.ssid_len, params.action,
-	       (uint8_t) (params.key_mgmt_suite & 0x000000FF),
-	       (uint8_t) ((params.key_mgmt_suite >> 8) & 0x000000FF),
-	       (uint8_t) ((params.key_mgmt_suite >> 16) & 0x000000FF),
-	       (uint8_t) ((params.key_mgmt_suite >> 24) & 0x000000FF));
-	return cfg80211_external_auth_request(ndev, &params, GFP_KERNEL);
+    /* external_auth (WPA3/SAE) not supported on kernel 4.9 */
+    return -EOPNOTSUPP;
 }
 
 const uint8_t *kalFindIeMatchMask(uint8_t eid,
@@ -7903,135 +7845,4 @@ const uint8_t *kalFindIeMatchMask(uint8_t eid,
 	}
 	return NULL;
 }
-
-#if CFG_MODIFY_TX_POWER_BY_BAT_VOLT
-void kalEnableTxPwrBackoffByBattVolt(struct ADAPTER *prAdapter, bool ucEnable)
-{
-	struct CMD_TX_POWER_PERCENTAGE_CTRL_T  rTxPwrPercentage;
-
-	ASSERT(prAdapter);
-
-	if (!prAdapter)
-		return;
-
-	rTxPwrPercentage.ucPowerCtrlFormatId = TX_POWER_PERCENTAGE_CTRL;
-	rTxPwrPercentage.fgPercentageEnable = ucEnable;
-	rTxPwrPercentage.ucBandIdx = 0;	/* TODO: how to get bandIdx */
-
-	DBGLOG(NIC, INFO, "kalEnableTxPwrBackoffByBattVolt, ucEnable = %d",
-				rTxPwrPercentage.fgPercentageEnable);
-
-	wlanSendSetQueryExtCmd(prAdapter,
-				CMD_ID_LAYER_0_EXT_MAGIC_NUM,
-			    EXT_CMD_ID_TX_POWER_FEATURE_CTRL,
-			    TRUE,
-			    FALSE, FALSE, NULL, NULL,
-			    sizeof(struct CMD_TX_POWER_PERCENTAGE_CTRL_T),
-			    (uint8_t *)&rTxPwrPercentage, NULL, 0);
-}
-
-void kalSetTxPwrBackoffByBattVolt(struct ADAPTER *prAdapter, bool ucEnable)
-{
-	struct CMD_TX_POWER_PERCENTAGE_DROP_CTRL_T  rTxPwrDrop;
-
-	ASSERT(prAdapter);
-
-	if (!prAdapter)
-		return;
-
-	rTxPwrDrop.ucPowerCtrlFormatId = TX_POWER_DROP_CTRL;
-	if (ucEnable)
-		rTxPwrDrop.i1PowerDropLevel = 3;
-	else
-		rTxPwrDrop.i1PowerDropLevel = 0;
-	rTxPwrDrop.ucBandIdx = 0;   /* TODO: how to get bandIdx */
-
-	DBGLOG(NIC, INFO, "kalSetTxPwrBackoffByBattVolt, i1PowerDropLevel = %d",
-			rTxPwrDrop.i1PowerDropLevel);
-
-	wlanSendSetQueryExtCmd(prAdapter,
-				CMD_ID_LAYER_0_EXT_MAGIC_NUM,
-			    EXT_CMD_ID_TX_POWER_FEATURE_CTRL,
-			    TRUE,
-			    FALSE, FALSE, NULL, NULL,
-			    sizeof(struct CMD_TX_POWER_PERCENTAGE_DROP_CTRL_T),
-			    (uint8_t *)&rTxPwrDrop, NULL, 0);
-
-	if (prAdapter->rWifiVar.eDbdcMode == ENUM_DBDC_MODE_DYNAMIC) {
-		DBGLOG(NIC, INFO,
-			  "kalSetTxPwrBackoffByBattVolt, ENUM_DBDC_MODE_DYNAMIC");
-		rTxPwrDrop.ucBandIdx = 1;
-
-		wlanSendSetQueryExtCmd(prAdapter,
-				CMD_ID_LAYER_0_EXT_MAGIC_NUM,
-			    EXT_CMD_ID_TX_POWER_FEATURE_CTRL,
-			    TRUE,
-			    FALSE, FALSE, NULL, NULL,
-			    sizeof(struct CMD_TX_POWER_PERCENTAGE_DROP_CTRL_T),
-			    (uint8_t *)&rTxPwrDrop, NULL, 0);
-	}
-}
-
-static void kal_bat_volt_notifier_callback(unsigned int volt)
-{
-	struct GLUE_INFO *prGlueInfo =
-			(struct GLUE_INFO *)wlan_bat_volt_notifier_priv_data;
-	struct ADAPTER *prAdapter = NULL;
-	struct REG_INFO *prRegInfo = NULL;
-
-	wlan_bat_volt = volt;
-	if (prGlueInfo == NULL) {
-		DBGLOG(NIC, ERROR, "volt = %d, prGlueInfo is NULL", volt);
-		return;
-	}
-	prAdapter = prGlueInfo->prAdapter;
-	prRegInfo = prGlueInfo->prRegInfo;
-
-	if (prRegInfo == NULL || prGlueInfo->prAdapter == NULL) {
-		DBGLOG(NIC, ERROR,
-			"volt = %d, prRegInfo or prAdapter is NULL", volt);
-		return;
-	}
-	if (prGlueInfo->ulFlag & GLUE_FLAG_HALT) {
-		DBGLOG(NIC, ERROR, "volt = %d, Wi-Fi is stopped", volt);
-		fgIsTxPowerDecreased = FALSE;
-		return;
-	}
-
-	kalEnableTxPwrBackoffByBattVolt(prAdapter, TRUE);
-
-	if (volt == 3650 && fgIsTxPowerDecreased == TRUE) {
-		kalSetTxPwrBackoffByBattVolt(prAdapter, FALSE);
-		fgIsTxPowerDecreased = FALSE;
-	} else if (volt == 3550 && fgIsTxPowerDecreased == FALSE) {
-		kalSetTxPwrBackoffByBattVolt(prAdapter, TRUE);
-		fgIsTxPowerDecreased = TRUE;
-	}
-}
-
-int32_t kalBatNotifierReg(IN struct GLUE_INFO *prGlueInfo)
-{
-	int32_t i4Ret;
-	static struct lbat_user rWifiBatVolt;
-
-	wlan_bat_volt_notifier_priv_data = prGlueInfo;
-	wlan_bat_volt = 0;
-	i4Ret = lbat_user_register(&rWifiBatVolt, "WiFi Get Battery Voltage",
-				   3650, 3550, 2000,
-				   kal_bat_volt_notifier_callback);
-	if (i4Ret)
-		DBGLOG(SW4, ERROR, "Register rWifiBatVolt failed:%d\n", i4Ret);
-	else
-		DBGLOG(SW4, TRACE, "Register rWifiBatVolt succeed\n");
-
-	return i4Ret;
-}
-
-void kalBatNotifierUnReg(void)
-{
-	wlan_bat_volt_notifier_priv_data = NULL;
-}
-
-#endif
-
 

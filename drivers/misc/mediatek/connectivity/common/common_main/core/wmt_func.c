@@ -317,9 +317,6 @@ INT32 wmt_func_bt_on(P_WMT_IC_OPS pOps, P_WMT_GEN_CONF pConf)
 		ctrlPa2 = 0;
 		wmt_core_ctrl(WMT_CTRL_BGW_DESENSE_CTRL, &ctrlPa1, &ctrlPa2);
 	}
-
-	wmt_send_bt_tssi_cmd();
-
 	return 0;
 }
 

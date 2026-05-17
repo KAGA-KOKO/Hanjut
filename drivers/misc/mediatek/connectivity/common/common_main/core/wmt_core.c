@@ -787,10 +787,6 @@ static INT32 wmt_core_stp_init(VOID)
 		WMT_ERR_FUNC("WMT-CORE: wmt_conf_get_cfg return NULL!!\n");
 	if (!(pctx->wmtInfoBit & WMT_OP_HIF_BIT)) {
 		WMT_ERR_FUNC("WMT-CORE: no hif info!\n");
-		/* turn off VCN33_2 */
-		ctrlPa1 = EFUSE_PALDO;
-		ctrlPa2 = PALDO_OFF;
-		iRet = wmt_core_ctrl(WMT_CTRL_SOC_PALDO_CTRL, &ctrlPa1, &ctrlPa2);
 		osal_assert(0);
 		return -1;
 	}

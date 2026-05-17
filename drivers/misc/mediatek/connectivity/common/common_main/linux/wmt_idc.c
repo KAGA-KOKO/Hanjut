@@ -198,7 +198,11 @@ INT32 wmt_idc_msg_to_lte_handing(VOID)
 						opcode + IPC_EL1_MSG_ID_BEGIN - LTE_MSG_ID_OFFSET + 1;
 					/*handling flag value in wmt cmd */
 					if (gWmtIdcInfo.iit.msg_id == IPC_MSG_ID_MD_CONSYS_VERIFICATION_REQ)
-						gWmtIdcInfo.iit.dest_mod_id = MD_MOD_GMMGR;
+						#ifdef MD_MOD_GMMGR
+gWmtIdcInfo.iit.dest_mod_id = MD_MOD_GMMGR;
+#else
+gWmtIdcInfo.iit.dest_mod_id = 0; /* dummy */
+#endif
 					else
 						gWmtIdcInfo.iit.dest_mod_id = MD_MOD_EL1;
 

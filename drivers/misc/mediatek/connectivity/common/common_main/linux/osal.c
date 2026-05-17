@@ -1269,9 +1269,6 @@ INT32 osal_wake_lock_count(P_OSAL_WAKE_LOCK pLock)
 #if !defined(CONFIG_PROVE_LOCKING)
 INT32 osal_unsleepable_lock_init(P_OSAL_UNSLEEPABLE_LOCK pUSL)
 {
-	if (pUSL->init_flag)
-			return -1;
-		pUSL->init_flag = 1;
 	spin_lock_init(&(pUSL->lock));
 	return 0;
 }
@@ -1291,7 +1288,6 @@ INT32 osal_unlock_unsleepable_lock(P_OSAL_UNSLEEPABLE_LOCK pUSL)
 
 INT32 osal_unsleepable_lock_deinit(P_OSAL_UNSLEEPABLE_LOCK pUSL)
 {
-	pUSL->init_flag = 0;
 	return 0;
 }
 
@@ -1308,10 +1304,6 @@ INT32 osal_unsleepable_lock_deinit(P_OSAL_UNSLEEPABLE_LOCK pUSL)
 #if !defined(CONFIG_PROVE_LOCKING)
 INT32 osal_sleepable_lock_init(P_OSAL_SLEEPABLE_LOCK pSL)
 {
-	if (pSL->init_flag)
-			return -1;
-		pSL->init_flag = 1;
-
 	mutex_init(&pSL->lock);
 	return 0;
 }
@@ -1335,9 +1327,6 @@ INT32 osal_trylock_sleepable_lock(P_OSAL_SLEEPABLE_LOCK pSL)
 
 INT32 osal_sleepable_lock_deinit(P_OSAL_SLEEPABLE_LOCK pSL)
 {
-	if (!pSL->init_flag)
-		return -1;
-	pSL->init_flag = 0;
 	mutex_destroy(&pSL->lock);
 	return 0;
 }

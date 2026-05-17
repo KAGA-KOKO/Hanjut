@@ -229,6 +229,9 @@ static UINT8 WMT_COEX_EXT_ELAN_GAIN_P1_CMD[] = { 0x01, 0x10, 0x12, 0x00, 0x1B, 0
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 static UINT8 WMT_COEX_EXT_ELAN_GAIN_P1_EVT[] = { 0x02, 0x10, 0x01, 0x00, 0x00 };
+
+static UINT8 WMT_COEX_EXT_EPA_MODE_CMD[] = { 0x01, 0x10, 0x02, 0x00, 0x1D, 0x00 };
+static UINT8 WMT_COEX_EXT_EPA_MODE_EVT[] = { 0x02, 0x10, 0x01, 0x00, 0x00 };
 #endif
 
 static UINT8 WMT_EPA_SETTING_CONFIG_CMD[] = { 0x01, 0x02, 0x02, 0x00, 0x0E, 0x00 };
@@ -951,6 +954,7 @@ static struct init_script coex_table[] = {
 #else
 	INIT_CMD(WMT_COEX_WIFI_PATH_CMD, WMT_COEX_WIFI_PATH_EVT, "wifi path"),
 	INIT_CMD(WMT_COEX_EXT_ELAN_GAIN_P1_CMD, WMT_COEX_EXT_ELAN_GAIN_P1_EVT, "wifi elan gain p1"),
+	INIT_CMD(WMT_COEX_EXT_EPA_MODE_CMD, WMT_COEX_EXT_EPA_MODE_EVT, "wifi ext epa mode"),
 #endif
 };
 
@@ -1261,10 +1265,6 @@ static INT32 mtk_wcn_soc_sw_init(P_WMT_HIF_CONF pWmtHifConf)
 			return -6;
 		}
 		patch_num = mtk_wcn_soc_get_patch_num();
-                if (patch_num == 0) {
-			WMT_ERR_FUNC("patch_num is %d\n", iRet);
-			return -6;
-		}
 	}
 #if CFG_WMT_PATCH_DL_OPTM
 	if (wmt_ic_ops_soc.icId != 0x6765 &&
@@ -1503,7 +1503,8 @@ static INT32 mtk_wcn_soc_sw_init(P_WMT_HIF_CONF pWmtHifConf)
 	/* init coex before start RF calibration */
 	if (wmt_ic_ops_soc.icId == 0x6765 ||
 		wmt_ic_ops_soc.icId == 0x6761 ||
-		wmt_ic_ops_soc.icId == 0x6768) {
+		wmt_ic_ops_soc.icId == 0x6768 ||
+		wmt_ic_ops_soc.icId == 0x6785) {
 		iRet = wmt_stp_init_coex();
 		if (iRet) {
 			WMT_ERR_FUNC("init_coex fail(%d)\n", iRet);
@@ -2232,7 +2233,6 @@ static INT32 wmt_stp_init_coex(VOID)
 	INT32 iRet;
 	unsigned long addr = 0;
 	WMT_GEN_CONF *pWmtGenConf;
-	UINT32 coex_wmt_ext_elna_gain_p1_support = 0;
 
 #define COEX_WMT  0
 
@@ -2245,6 +2245,7 @@ static INT32 wmt_stp_init_coex(VOID)
 #else
 #define COEX_WIFI_PATH 1
 #define COEX_EXT_ELAN_GAIN_P1 2
+#define COEX_EXT_EPA_MODE 3
 #endif
 #define WMT_COXE_CONFIG_ADJUST_ANTENNA_OPCODE 6
 
@@ -2267,12 +2268,11 @@ static INT32 wmt_stp_init_coex(VOID)
 
 	if (wmt_ic_ops_soc.icId == 0x6765 ||
 		wmt_ic_ops_soc.icId == 0x6761 ||
-		wmt_ic_ops_soc.icId == 0x6768) {
+		wmt_ic_ops_soc.icId == 0x6768 ||
+		wmt_ic_ops_soc.icId == 0x6785) {
 		WMT_INFO_FUNC("elna_gain_p1_support:0x%x\n", pWmtGenConf->coex_wmt_ext_elna_gain_p1_support);
 		if (pWmtGenConf->coex_wmt_ext_elna_gain_p1_support != 1)
 			return 0;
-		else
-			coex_wmt_ext_elna_gain_p1_support = 1;
 	}
 
 	/*Dump the coex-related info */
@@ -2301,8 +2301,7 @@ static INT32 wmt_stp_init_coex(VOID)
 #endif
 
 	/*command adjustion due to WMT.cfg */
-	if (coex_wmt_ext_elna_gain_p1_support == 1)
-		coex_table[COEX_WMT].cmd[4] = WMT_COXE_CONFIG_ADJUST_ANTENNA_OPCODE;
+	coex_table[COEX_WMT].cmd[4] = WMT_COXE_CONFIG_ADJUST_ANTENNA_OPCODE;
 	coex_table[COEX_WMT].cmd[5] = pWmtGenConf->coex_wmt_ant_mode;
 	if (gWmtDbgLvl >= WMT_LOG_DBG)
 		wmt_core_dump_data(&coex_table[COEX_WMT].cmd[0], coex_table[COEX_WMT].str, coex_table[COEX_WMT].cmdSz);
@@ -2346,72 +2345,64 @@ static INT32 wmt_stp_init_coex(VOID)
 
 	wmt_core_dump_data(&coex_table[COEX_MISC].cmd[0], coex_table[COEX_MISC].str, coex_table[COEX_MISC].cmdSz);
 #else
-	if (coex_wmt_ext_elna_gain_p1_support == 1) {
-		coex_table[COEX_WIFI_PATH].cmd[5] =
-			(UINT8)((pWmtGenConf->coex_wmt_wifi_path & 0x00FF) >> 0);
-		coex_table[COEX_WIFI_PATH].cmd[6] =
-			(UINT8)((pWmtGenConf->coex_wmt_wifi_path & 0xFF00) >> 8);
+	coex_table[COEX_WIFI_PATH].cmd[5] =
+		(UINT8)((pWmtGenConf->coex_wmt_wifi_path & 0x00FF) >> 0);
+	coex_table[COEX_WIFI_PATH].cmd[6] =
+		(UINT8)((pWmtGenConf->coex_wmt_wifi_path & 0xFF00) >> 8);
 
-		if (gWmtDbgLvl >= WMT_LOG_DBG) {
-			wmt_core_dump_data(&coex_table[COEX_WIFI_PATH].cmd[0],
-					coex_table[COEX_WIFI_PATH].str, coex_table[COEX_WIFI_PATH].cmdSz);
-		}
-
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[5] = pWmtGenConf->coex_wmt_ext_elna_gain_p1_support;
-		/* wmt_ext_elna_gain_p1 D0*/
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[6] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0x000000FF) >> 0);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[7] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0x0000FF00) >> 8);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[8] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0x00FF0000) >> 16);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[9] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0xFF000000) >> 24);
-		/* wmt_ext_elna_gain_p1 D1*/
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[10] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0x000000FF) >> 0);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[11] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0x0000FF00) >> 8);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[12] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0x00FF0000) >> 16);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[13] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0xFF000000) >> 24);
-		/* wmt_ext_elna_gain_p1 D2*/
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[14] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0x000000FF) >> 0);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[15] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0x0000FF00) >> 8);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[16] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0x00FF0000) >> 16);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[17] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0xFF000000) >> 24);
-		/* wmt_ext_elna_gain_p1 D3*/
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[18] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0x000000FF) >> 0);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[19] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0x0000FF00) >> 8);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[20] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0x00FF0000) >> 16);
-		coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[21] =
-			(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0xFF000000) >> 24);
-
-		if (gWmtDbgLvl >= WMT_LOG_DBG) {
-			wmt_core_dump_data(&coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[0],
-					   coex_table[COEX_EXT_ELAN_GAIN_P1].str,
-					   coex_table[COEX_EXT_ELAN_GAIN_P1].cmdSz);
-		}
+	if (gWmtDbgLvl >= WMT_LOG_DBG) {
+		wmt_core_dump_data(&coex_table[COEX_WIFI_PATH].cmd[0],
+				coex_table[COEX_WIFI_PATH].str, coex_table[COEX_WIFI_PATH].cmdSz);
 	}
+
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[5] = pWmtGenConf->coex_wmt_ext_elna_gain_p1_support;
+	/* wmt_ext_elna_gain_p1 D0*/
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[6] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0x000000FF) >> 0);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[7] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0x0000FF00) >> 8);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[8] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0x00FF0000) >> 16);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[9] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D0 & 0xFF000000) >> 24);
+	/* wmt_ext_elna_gain_p1 D1*/
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[10] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0x000000FF) >> 0);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[11] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0x0000FF00) >> 8);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[12] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0x00FF0000) >> 16);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[13] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D1 & 0xFF000000) >> 24);
+	/* wmt_ext_elna_gain_p1 D2*/
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[14] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0x000000FF) >> 0);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[15] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0x0000FF00) >> 8);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[16] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0x00FF0000) >> 16);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[17] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D2 & 0xFF000000) >> 24);
+	/* wmt_ext_elna_gain_p1 D3*/
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[18] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0x000000FF) >> 0);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[19] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0x0000FF00) >> 8);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[20] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0x00FF0000) >> 16);
+	coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[21] =
+		(UINT8)((pWmtGenConf->coex_wmt_ext_elna_gain_p1_D3 & 0xFF000000) >> 24);
+
+	if (gWmtDbgLvl >= WMT_LOG_DBG) {
+		wmt_core_dump_data(&coex_table[COEX_EXT_ELAN_GAIN_P1].cmd[0],
+				   coex_table[COEX_EXT_ELAN_GAIN_P1].str,
+				   coex_table[COEX_EXT_ELAN_GAIN_P1].cmdSz);
+	}
+
+	coex_table[COEX_EXT_EPA_MODE].cmd[5] = pWmtGenConf->coex_wmt_ext_epa_mode;
 #endif
 
-#if CFG_SUBSYS_COEX_NEED
 	iRet = wmt_core_init_script(coex_table, ARRAY_SIZE(coex_table));
-#else
-	if (coex_wmt_ext_elna_gain_p1_support == 1)
-		iRet = wmt_core_init_script(coex_table, ARRAY_SIZE(coex_table));
-	else
-		iRet = wmt_core_init_script(coex_table,
-			(ARRAY_SIZE(coex_table) > 2) ? (ARRAY_SIZE(coex_table) - 2) : ARRAY_SIZE(coex_table));
-#endif
 
 	return iRet;
 }
@@ -3085,7 +3076,7 @@ patch_download:
 			iRet = -1;
 			break;
 		}
-		WMT_DBG_FUNC("wmt_core: write fragSeq(%d) size(%d, %d) ok\n",
+		WMT_DBG_FUNC("wmt_core: write fragSeq(%d) size(%lu, %d) ok\n",
 			     fragSeq, fragSize + sizeof(WMT_PATCH_CMD), u4Res);
 
 		osal_memset(evtBuf, 0, sizeof(evtBuf));
@@ -3107,7 +3098,7 @@ patch_download:
 				evtBuf[2],
 				evtBuf[3],
 				evtBuf[4]);
-			WMT_ERR_FUNC("wmt_core: exp(%d):[%02X,%02X,%02X,%02X,%02X]\n",
+			WMT_ERR_FUNC("wmt_core: exp(%lu):[%02X,%02X,%02X,%02X,%02X]\n",
 				sizeof(WMT_PATCH_EVT),
 				WMT_PATCH_EVT[0],
 				WMT_PATCH_EVT[1],
@@ -3118,7 +3109,7 @@ patch_download:
 			break;
 		}
 #endif
-		WMT_DBG_FUNC("wmt_core: read WMT_PATCH_EVT length(%d, %d) ok\n", sizeof(WMT_PATCH_EVT), u4Res);
+		WMT_DBG_FUNC("wmt_core: read WMT_PATCH_EVT length(%lu, %d) ok\n", sizeof(WMT_PATCH_EVT), u4Res);
 		offset += patchSizePerFrag;
 		++fragSeq;
 	}
@@ -3321,10 +3312,9 @@ static INT32 mtk_wcn_soc_patch_dwn(UINT32 index)
 	    wmt_ic_ops_soc.icId == 0x3967 ||
 	    wmt_ic_ops_soc.icId == 0x6761 ||
 	    wmt_ic_ops_soc.icId == 0x6768 ||
+	    wmt_ic_ops_soc.icId == 0x6779 ||
 	    wmt_ic_ops_soc.icId == 0x6785 ||
-	    wmt_ic_ops_soc.icId == 0x8168 ||
-	    wmt_ic_ops_soc.icId == 0x0788 ||
-	    wmt_ic_ops_soc.icId == 0x6779) {
+	    wmt_ic_ops_soc.icId == 0x8168) {
 		/* remove patch checksum:
 		 * |<-patch checksum: 2Bytes->|<-patch body: X Bytes (X=patchSize)--->|
 		 */
@@ -3987,7 +3977,7 @@ get_calibration_fail:
 			emiInfo->emi_size,
 			emiInfo->emi_phy_addr);
 	}
-	WMT_ERR_FUNC("gBTCalResultSize=%d gWiFiCalResult=0x%x gWiFiCalSize=%d gWiFiCalAddrOffset=0x%x\n",
+	WMT_ERR_FUNC("gBTCalResultSize=%d gWiFiCalResult=0x%p gWiFiCalSize=%d gWiFiCalAddrOffset=0x%x\n",
 		gBTCalResultSize, gWiFiCalResult,
 		gWiFiCalSize, gWiFiCalAddrOffset);
 	if (gBTCalResult != NULL) {
@@ -4117,35 +4107,3 @@ static INT32 mtk_wcn_soc_calibration(void)
 	}
 	return 0;
 }
-
-void wmt_send_bt_tssi_cmd(void)
-{
-	P_WMT_GEN_CONF pWmtGenConf = NULL;
-	INT32 iRet = -1;
-
-	pWmtGenConf = wmt_get_gen_conf_pointer();
-
-	if (pWmtGenConf && pWmtGenConf->bt_tssi_from_wifi) {
-		if (wmt_ic_ops_soc.icId == 0x0713 ||
-		    wmt_ic_ops_soc.icId == 0x6765 ||
-		    wmt_ic_ops_soc.icId == 0x3967 ||
-		    wmt_ic_ops_soc.icId == 0x6761 ||
-		    wmt_ic_ops_soc.icId == 0x6779 ||
-		    wmt_ic_ops_soc.icId == 0x6768 ||
-		    wmt_ic_ops_soc.icId == 0x6785 ||
-		    wmt_ic_ops_soc.icId == 0x8168 ||
-		    wmt_ic_ops_soc.icId == 0x0788)
-			WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[4] = 0x10;
-
-		WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[5] = pWmtGenConf->bt_tssi_from_wifi;
-		WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[6] = (pWmtGenConf->bt_tssi_target & 0x00FF) >> 0;
-		WMT_BT_TSSI_FROM_WIFI_CONFIG_CMD[7] = (pWmtGenConf->bt_tssi_target & 0xFF00) >> 8;
-		iRet = wmt_core_init_script(bt_tssi_from_wifi_table, osal_array_size(bt_tssi_from_wifi_table));
-		if (iRet)
-			WMT_ERR_FUNC("bt_tssi_from_wifi_table fail(%d)\n", iRet);
-		else
-			WMT_INFO_FUNC("bt_tssi_target = %d, bt_tssi_from_wifi = %d\n", pWmtGenConf->bt_tssi_target, pWmtGenConf->bt_tssi_from_wifi);
-	}
-}
-
-

@@ -354,8 +354,12 @@ static INT32 _stp_psm_clean_up_redundant_active_op(P_OSAL_OP_Q pOpQ)
 				RB_PUT(pFreeOpQ, pOp);
 			} else if (prev_opId == prev_prev_opId) {
 				RB_GET(pOpQ, pOp);
-				STP_PSM_PR_DBG("redundant opId(%d) found, remove it\n",
+				if (!pOp) {
+					STP_PSM_PR_DBG("RB_GET pOp == NULL\n");
+				} else {
+					STP_PSM_PR_DBG("redundant opId(%d) found, remove it\n",
 						 pOp->op.opId);
+				}
 				RB_PUT(pFreeOpQ, pOp);
 			} else
 			    if ((prev_opId == STP_OPID_PSM_WAKEUP
@@ -1346,13 +1350,9 @@ static inline INT32 _stp_psm_do_wait(MTKSTP_PSM_T *stp_psm, MTKSTP_PSM_STATE_T s
 	osal_get_local_time(&sec, &usec);
 	while (_stp_psm_get_state(stp_psm) != state && i < limit && mtk_wcn_stp_is_enable()) {
 		i++;
-		#ifndef VENDOR_EDIT
-		//Pan.Zhang@PSW.CN.WiFi.Basic.Log.1120976, 2017/09/27,
-		//Remove for reduce useless log.
 		if (i < 3)
 			STP_PSM_PR_INFO("STP is waiting state for %s, i=%d, state = %d\n",
 					  g_psm_state[state], i, _stp_psm_get_state(stp_psm));
-		#endif /* VENDOR_EDIT */
 		osal_sleep_ms(POLL_WAIT);
 		if (i == 10) {
 			STP_PSM_PR_WARN("-Wait for %s takes %d msec\n", g_psm_state[state], i * POLL_WAIT);
@@ -1370,13 +1370,9 @@ static inline INT32 _stp_psm_do_wait(MTKSTP_PSM_T *stp_psm, MTKSTP_PSM_STATE_T s
 		_stp_psm_opid_dbg_out_printk(g_stp_psm_opid_dbg);
 		return STP_PSM_OPERATION_FAIL;
 	}
-	#ifndef VENDOR_EDIT
-	//Pan.Zhang@PSW.CN.WiFi.Basic.Log.1120976, 2017/09/27,
-	//Remove for reduce useless log.
 	if (i > 0)
 		STP_PSM_PR_INFO("+Total waits for %s takes %llu usec\n",
 					g_psm_state[state], osal_elapsed_us(sec, usec));
-	#endif /* VENDOR_EDIT */
 	return STP_PSM_OPERATION_SUCCESS;
 }
 

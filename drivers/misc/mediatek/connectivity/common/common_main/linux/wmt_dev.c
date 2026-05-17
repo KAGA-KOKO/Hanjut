@@ -373,7 +373,7 @@ static ssize_t wmt_dev_proc_for_aee_read(struct file *filp, char __user *buf, si
 	INT32 retval = 0;
 	UINT32 len = 0;
 
-	WMT_INFO_FUNC("%s: count %lu pos %lld\n", __func__, count, *f_pos);
+	WMT_INFO_FUNC("%s: count %zu pos %lld\n", __func__, count, *f_pos);
 
 	if (osal_lock_sleepable_lock(&g_aee_read_lock)) {
 		WMT_ERR_FUNC("lock failed\n");
@@ -465,7 +465,7 @@ static ssize_t wmt_dev_proc_for_dump_info_read(struct file *filp, char __user *b
 	INT32 retval = 0;
 	UINT32 len = 0;
 
-	WMT_INFO_FUNC("%s: count %lu pos %lld\n", __func__, count, *f_pos);
+	WMT_INFO_FUNC("%s: count %zu pos %lld\n", __func__, count, *f_pos);
 
 	if (osal_lock_sleepable_lock(&g_dump_info_read_lock)) {
 		WMT_ERR_FUNC("lock failed\n");
@@ -591,7 +591,6 @@ INT32 wmt_dev_patch_get(PUINT8 pPatchName, osal_firmware **ppPatch)
 {
 	INT32 iRet = -1;
 	osal_firmware *fw = NULL;
-	INT32 iRetry = 5;
 
 	if (!ppPatch) {
 		WMT_ERR_FUNC("invalid ppBufptr!\n");
@@ -601,11 +600,10 @@ INT32 wmt_dev_patch_get(PUINT8 pPatchName, osal_firmware **ppPatch)
 	do {
 		iRet = request_firmware((const struct firmware **)&fw, pPatchName, NULL);
 		if (iRet == -EAGAIN) {
-			//WMT_ERR_FUNC("failed to open or read!(%s), retry again!\n", pPatchName);
-			iRetry--;
+			WMT_ERR_FUNC("failed to open or read!(%s), retry again!\n", pPatchName);
 			osal_sleep_ms(100);
 		}
-	} while ((iRet == -EAGAIN) && (iRetry > 0));
+	} while (iRet == -EAGAIN);
 	if (iRet != 0) {
 		WMT_ERR_FUNC("failed to open or read!(%s)\n", pPatchName);
 		release_firmware(fw);
@@ -777,9 +775,6 @@ LONG wmt_dev_tm_temp_query(VOID)
 	LONG return_temp = 0;
 	INT8 query_cond = 0;
 
-	if (!mtk_wcn_stp_is_ready())
-		return 0;
-
 	/* Let us work on the copied version of function static variables */
 	osal_lock_unsleepable_lock(&g_temp_query_spinlock);
 	osal_memcpy(temp_table, s_temp_table, sizeof(s_temp_table));
@@ -916,7 +911,7 @@ ssize_t WMT_write(struct file *filp, const char __user *buf, size_t count, loff_
 	UINT8 wrBuf[NAME_MAX + 1] = { 0 };
 	INT32 copySize = (count < NAME_MAX) ? count : NAME_MAX;
 
-	WMT_LOUD_FUNC("count:%lu copySize:%d\n", count, copySize);
+	WMT_LOUD_FUNC("count:%zu copySize:%d\n", count, copySize);
 
 	if (copySize > 0) {
 		if (copy_from_user(wrBuf, buf, copySize)) {
@@ -1142,7 +1137,7 @@ LONG WMT_unlocked_ioctl(struct file *filp, UINT32 cmd, ULONG arg)
 			pOp->op.au4OpData[1] = (SIZE_T)&gLpbkBuf[0];	/* packet buffer pointer */
 			memcpy(&gLpbkBufLog, &gLpbkBuf[((effectiveLen >= 4) ? effectiveLen - 4 : 0)], 4);
 			pSignal->timeoutValue = MAX_EACH_WMT_CMD;
-			WMT_INFO_FUNC("OPID(%d) type(%lu) start\n", pOp->op.opId, pOp->op.au4OpData[0]);
+			WMT_INFO_FUNC("OPID(%d) type(%zu) start\n", pOp->op.opId, pOp->op.au4OpData[0]);
 			if (DISABLE_PSM_MONITOR()) {
 				WMT_ERR_FUNC("wake up failed,OPID(%d) type(%d) abort\n",
 					     pOp->op.opId, pOp->op.au4OpData[0]);
@@ -1417,7 +1412,7 @@ LONG WMT_unlocked_ioctl(struct file *filp, UINT32 cmd, ULONG arg)
 				iRet = -1;
 				break;
 			}
-			WMT_INFO_FUNC("OPID(%d) length(%d) ok\n", pOp->op.opId, pOp->op.au4OpData[0]);
+			WMT_INFO_FUNC("OPID(%d) length(%zu) ok\n", pOp->op.opId, pOp->op.au4OpData[0]);
 			iRet = pOp->op.au4OpData[0];
 
 		} while (0);

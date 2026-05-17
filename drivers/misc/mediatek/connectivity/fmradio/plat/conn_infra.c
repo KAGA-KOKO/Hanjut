@@ -922,10 +922,20 @@ static bool drv_set_own(void)
 {
 	struct fm_spi_interface *si = &fm_wcn_ops.si;
 	struct fm_ext_interface *ei = &fm_wcn_ops.ei;
-	unsigned int val, i;
+	unsigned int val, tmp, i;
+	int ret = 0;
 
-	if (FM_LOCK(fm_wcn_ops.own_lock))
+	ret = FM_LOCK(fm_wcn_ops.own_lock);
+	for (i = 0; ret && i < MAX_SET_OWN_COUNT; i++) {
+		fm_delayms(2);
+		ret = FM_LOCK(fm_wcn_ops.own_lock);
+	}
+
+	/* get lock fail */
+	if (i == MAX_SET_OWN_COUNT) {
+		WCN_DBG(FM_ERR | CHIP, "get own lock fail[%d]\n", ret);
 		return false;
+	}
 
 	/* wakeup conninfra */
 	drv_host_write(si, 0x180601B0, 0x1);
@@ -940,6 +950,11 @@ static bool drv_set_own(void)
 	/* polling fail */
 	if (i == MAX_SET_OWN_COUNT) {
 		/* unlock if set own fail */
+		drv_host_read(si, 0x180601B0, &val);
+		drv_host_read(si, 0x18001808, &tmp);
+		WCN_DBG(FM_ERR | CHIP,
+			"polling chip id fail [0x180601B0]=[0x%08x], [0x18001808]=[0x%08x]\n",
+			val, tmp);
 		FM_UNLOCK(fm_wcn_ops.own_lock);
 		return false;
 	}
@@ -949,9 +964,8 @@ static bool drv_set_own(void)
 		return false;
 	}
 
-	drv_host_read(si, 0x1800F000, &val);
-	val |= 1 << 4;
-	drv_host_write(si, 0x1800F000, val);
+	/* conn_infra bus debug function setting */
+	conninfra_config_setup();
 
 	return true;
 }

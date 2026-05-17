@@ -544,8 +544,6 @@ UINT32 stp_dbg_soc_read_debug_crs(ENUM_CONNSYS_DEBUG_CR cr)
 	emi_phy_addr = mtk_wcn_consys_soc_get_emi_phy_add();
 
 	if (cr == CONNSYS_EMI_REMAP) {
-		if (chip_id == 0x6771)
-			return 0;
 		if (emi_phy_addr != NULL && emi_phy_addr->emi_remap_offset)
 			return CONSYS_REG_READ(conn_reg.topckgen_base +
 					emi_phy_addr->emi_remap_offset);
@@ -555,7 +553,7 @@ UINT32 stp_dbg_soc_read_debug_crs(ENUM_CONNSYS_DEBUG_CR cr)
 
 	if (chip_id == 0x6765 || chip_id == 0x3967 || chip_id == 0x6761
 			|| chip_id == 0x6779 || chip_id == 0x6768 || chip_id == 0x6785
-			|| chip_id == 0x8168 || chip_id == 0x6771)
+			|| chip_id == 0x8168)
 		return 0;
 
 	if (conn_reg.mcu_base) {

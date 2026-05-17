@@ -1,20 +1,7 @@
-###############################################################################
-# Necessary Check
-
-ifeq ($(AUTOCONF_H),)
-    $(error AUTOCONF_H is not defined)
-endif
-
 ifneq ($(CONFIG_MTK_COMBO),)
-
-ccflags-y += -imacros $(AUTOCONF_H)
 
 ifeq ($(CONFIG_MTK_COMBO_CHIP),)
     $(error CONFIG_MTK_COMBO_CHIP not defined)
-endif
-
-ifeq ($(TARGET_BUILD_VARIANT),$(filter $(TARGET_BUILD_VARIANT),userdebug user))
-    #ldflags-y += -s
 endif
 
 # Force build fail on modpost warning

@@ -48,27 +48,27 @@ uint32_t fwDbgLevel = WIFI_FW_LOG_DBG;
 #define WIFI_DBG_FUNC(fmt, arg...)	\
 	do { \
 		if (fwDbgLevel >= WIFI_FW_LOG_DBG) \
-			pr_info(PFX "%s[D]: " fmt, __func__, ##arg); \
+			pr_debug_ratelimited(PFX "%s[D]: " fmt, __func__, ##arg); \
 	} while (0)
 #define WIFI_INFO_FUNC(fmt, arg...)	\
 	do { \
 		if (fwDbgLevel >= WIFI_FW_LOG_INFO) \
-			pr_info(PFX "%s[I]: " fmt, __func__, ##arg); \
+			pr_debug_ratelimited(PFX "%s[I]: " fmt, __func__, ##arg); \
 	} while (0)
 #define WIFI_INFO_FUNC_LIMITED(fmt, arg...)	\
 	do { \
 		if (fwDbgLevel >= WIFI_FW_LOG_INFO) \
-			pr_info_ratelimited(PFX "%s[L]: " fmt, __func__, ##arg); \
+			pr_debug_ratelimited(PFX "%s[L]: " fmt, __func__, ##arg); \
 	} while (0)
 #define WIFI_WARN_FUNC(fmt, arg...)	\
 	do { \
 		if (fwDbgLevel >= WIFI_FW_LOG_WARN) \
-			pr_info(PFX "%s[W]: " fmt, __func__, ##arg); \
+			pr_debug_ratelimited(PFX "%s[W]: " fmt, __func__, ##arg); \
 	} while (0)
 #define WIFI_ERR_FUNC(fmt, arg...)	\
 	do { \
 		if (fwDbgLevel >= WIFI_FW_LOG_ERR) \
-			pr_info(PFX "%s[E]: " fmt, __func__, ##arg); \
+			pr_debug_ratelimited(PFX "%s[E]: " fmt, __func__, ##arg); \
 	} while (0)
 
 
@@ -117,10 +117,7 @@ static ssize_t fw_log_wifi_read(struct file *filp, char __user *buf, size_t len,
 {
 	size_t ret = 0;
 
-    //#ifdef ODM_WT_EDIT
-    //Fanghua.Zhu@ODM_WT.BSP.CONN.WIFI.BugID2628224, 2019/12/18, Modify for reduce reduce wifi kernel log print.
-    //WIFI_INFO_FUNC_LIMITED("fw_log_wifi_read len --> %d\n", (uint32_t) len);
-    //#endif /* ODM_WT_EDIT */
+	WIFI_INFO_FUNC_LIMITED("fw_log_wifi_read len --> %d\n", (uint32_t) len);
 	ret = connsys_log_read_to_user(CONNLOG_TYPE_WIFI, buf, len);
 	return ret;
 }

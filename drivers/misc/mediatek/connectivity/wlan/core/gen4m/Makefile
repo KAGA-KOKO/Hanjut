@@ -91,11 +91,7 @@ else
     ccflags-y += -DCFG_WIFI_IP_SET=1
 endif
 
-ifneq ($(filter MTK_WCN_REMOVE_KERNEL_MODULE,$(KBUILD_SUBDIR_CCFLAGS)),)
-    ccflags-y += -DCFG_BUILT_IN_DRIVER=1
-else
-    ccflags-y += -DCFG_BUILT_IN_DRIVER=0
-endif
+ccflags-y += -DCFG_BUILT_IN_DRIVER=1
 
 ifneq ($(findstring UT_TEST_MODE,$(MTK_COMBO_CHIP)),)
 ccflags-y:=$(filter-out -UUT_TEST_MODE,$(ccflags-y))
@@ -200,9 +196,7 @@ else
     ccflags-y += -DCFG_FLAVOR_FIRMWARE=0
 endif
 
-ifeq ($(MODULE_NAME),)
-	MODULE_NAME := wlan_$(shell echo $(strip $(WLAN_CHIP_ID)) | tr A-Z a-z)_$(CONFIG_MTK_COMBO_WIFI_HIF)
-endif
+MODULE_NAME := wlan_drv_gen4m
 
 ccflags-y += -DDBG=0
 ccflags-y += -I$(src)/os -I$(src)/os/linux/include
@@ -213,7 +207,6 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/performance/include/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/emi/$(MTK_PLATFORM)
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/emi/submodule
-ccflags-y += -I$(srctree)/drivers/misc/mediatek/pmic/include/
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/sched/
 ccflags-y += -I$(srctree)/drivers/devfreq/
 ccflags-y += -I$(srctree)/net
