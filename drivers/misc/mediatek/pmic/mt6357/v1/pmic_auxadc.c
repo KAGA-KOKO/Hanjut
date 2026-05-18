@@ -135,9 +135,9 @@ static void wk_auxadc_dbg_dump(void)
 		}
 		for (j = 0; adc_dbg_addr[j] != 0; j++) {
 			if (j != 0 && j % 43 == 0) {
-				pr_notice("%d %s\n",
-					pmic_adc_dbg[dbg_stamp].ktime_sec,
-					reg_log);
+				//pr_notice("%d %s\n",
+				//	pmic_adc_dbg[dbg_stamp].ktime_sec,
+				//	reg_log);
 				strncpy(reg_log, "", 860);
 			}
 			snprintf(reg_str, 20, "Reg[0x%x]=0x%x, ",
@@ -145,9 +145,9 @@ static void wk_auxadc_dbg_dump(void)
 				pmic_adc_dbg[dbg_stamp].reg[j]);
 			strncat(reg_log, reg_str, 860);
 		}
-		pr_notice("%d %s\n",
-			pmic_adc_dbg[dbg_stamp].ktime_sec,
-			reg_log);
+		//pr_notice("%d %s\n",
+		//	pmic_adc_dbg[dbg_stamp].ktime_sec,
+		//	reg_log);
 		strncpy(reg_log, "", 860);
 		dbg_stamp++;
 		if (dbg_stamp >= 4)
@@ -184,8 +184,8 @@ static int wk_bat_temp_dbg(int bat_temp_prev, int bat_temp)
 	unsigned short i;
 
 	vbif28 = auxadc_priv_read_channel(AUXADC_VBIF);
-	pr_notice("BAT_TEMP_PREV:%d,BAT_TEMP:%d,VBIF28:%d\n",
-		bat_temp_prev, bat_temp, vbif28);
+	//pr_notice("BAT_TEMP_PREV:%d,BAT_TEMP:%d,VBIF28:%d\n",
+	//	bat_temp_prev, bat_temp, vbif28);
 	if (bat_temp < 200 || abs(bat_temp_prev - bat_temp) > 100) {
 		wk_auxadc_dbg_dump();
 		for (i = 0; i < 5; i++) {
@@ -208,11 +208,10 @@ static int wk_bat_temp_dbg(int bat_temp_prev, int bat_temp)
 #endif
 			arr_bat_temp[i] =
 				auxadc_priv_read_channel(AUXADC_BAT_TEMP);
-			pr_notice("[CH3_DBG] %d,%d,%d\n",
-				  bat, bat_cur, arr_bat_temp[i]);
+			//pr_notice("[CH3_DBG] %d,%d,%d\n", bat, bat_cur, arr_bat_temp[i]);
 		}
 		bat_temp_new = bat_temp_filter(arr_bat_temp, 5);
-		pr_notice("Final BAT_TEMP_NEW:%d\n", bat_temp_new);
+		//pr_notice("Final BAT_TEMP_NEW:%d\n", bat_temp_new);
 	}
 	return bat_temp_new;
 }
@@ -304,8 +303,8 @@ void mdrt_monitor(void)
 	mdrt_timestamp = mdrt_timestamp_cur;
 
 	temp_mdrt_adc = pmic_get_register_value(PMIC_AUXADC_ADC_OUT_MDRT);
-	pr_notice("[MDRT_ADC] OLD = 0x%x, NOW = 0x%x, CNT = %d\n",
-		mdrt_adc, temp_mdrt_adc, mdrt_cnt);
+	//pr_notice("[MDRT_ADC] OLD = 0x%x, NOW = 0x%x, CNT = %d\n",
+	//	mdrt_adc, temp_mdrt_adc, mdrt_cnt);
 
 	if (temp_mdrt_adc != mdrt_adc) {
 		mdrt_cnt = 0;
@@ -476,7 +475,7 @@ int pmic_get_auxadc_value(int list)
 #endif
 		if (is_charging == 0)
 			bat_cur = 0 - bat_cur;
-		pr_notice("[CH3_DBG] bat_cur = %d\n", bat_cur);
+		//pr_notice("[CH3_DBG] bat_cur = %d\n", bat_cur);
 	}
 	if (list == AUXADC_LIST_HPOFS_CAL) {
 		ret = iio_read_channel_raw(

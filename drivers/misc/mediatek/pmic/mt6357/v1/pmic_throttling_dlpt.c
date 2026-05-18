@@ -98,7 +98,7 @@ static struct lbat_user lbat_test3;
 
 void lbat_test_callback(unsigned int thd)
 {
-	pr_notice("[%s] thd=%d\n", __func__, thd);
+	//pr_notice("[%s] thd=%d\n", __func__, thd);
 }
 #endif
 

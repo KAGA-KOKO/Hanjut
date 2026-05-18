@@ -148,7 +148,7 @@ static void alarmtimer_enqueue(struct alarm_base *base, struct alarm *alarm)
 
 	if (__ratelimit(&ratelimit)) {
 		ratelimit.begin = jiffies;
-		pr_notice("%s, %lld\n", __func__, alarm->node.expires.tv64);
+		//pr_notice("%s, %lld\n", __func__, alarm->node.expires.tv64);
 	}
 
 	timerqueue_add(&base->timerqueue, &alarm->node);
@@ -217,7 +217,7 @@ static enum hrtimer_restart alarmtimer_fired(struct hrtimer *timer)
 				atomic_set(&alarm_sleep_busy_atomic, 0);
 			}
 			if (alarm->function) {
-				pr_info("%s.: type=%d, count=%lld, wakeup count=%lld, func=%pf\n", __func__, alarm->type, alarm_count, wakeup_source_count_rtc, alarm->function); //log diff, better for log filter
+				//pr_info("%s.: type=%d, count=%lld, wakeup count=%lld, func=%pf\n", __func__, alarm->type, alarm_count, wakeup_source_count_rtc, alarm->function); //log diff, better for log filter
 			}
 		} else {
 			if (alarm->function) {
@@ -983,7 +983,7 @@ static int __init alarmtimer_init(void)
 	//Yunqing.Zeng@BSP.Power.Basic 2017/12/12 add for count alarm times
 	error = fb_register_client(&alarm_fb_notify_block);
 	if (error) {
-		pr_info("%s error: register notifier failed!\n", __func__);
+		//pr_info("%s error: register notifier failed!\n", __func__);
 	}
 	#endif /* VENDOR_EDIT */
 
