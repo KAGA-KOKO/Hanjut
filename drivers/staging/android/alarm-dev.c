@@ -165,7 +165,7 @@ static void alarm_set(enum android_alarm_type alarm_type, struct timespec *ts)
 
 #if defined(VENDOR_EDIT) && !defined(OPPO_RELEASE_FLAG)
 /*xing.xiong@BSP.Kernel.Debug, 2019/1/12, Modify for limiting kernel log*/
-	pr_notice("alarm %d set %ld.%09ld\n", alarm_type, ts->tv_sec, ts->tv_nsec);
+	//pr_notice("alarm %d set %ld.%09ld\n", alarm_type, ts->tv_sec, ts->tv_nsec);
 #endif
 	if (alarm_type == ANDROID_ALARM_POWER_ON) {
 		alarm_set_power_on(*ts, false);
@@ -216,7 +216,7 @@ static int alarm_set_rtc(struct timespec *ts)
 	int rv = 0;
 
 	rtc_time_to_tm(ts->tv_sec, &new_rtc_tm);
-	pr_notice("set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n",
+	//pr_notice("set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n",
 		  ts->tv_sec, ts->tv_nsec,
 		  new_rtc_tm.tm_hour, new_rtc_tm.tm_min,
 		  new_rtc_tm.tm_sec, new_rtc_tm.tm_mon + 1,
