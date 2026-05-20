@@ -20,3 +20,8 @@ obj-$(CONFIG_PLAT_VERSATILE)	+= versatile/
 # Bin.Li@EXP.BSP.bootloader.bootflow, 2017/05/15, Add for oppo device info and oppo project
 obj-$(CONFIG_OPPO_ARCH_FILE)	+= oppo/
 #endif /*VENDOR_EDIT*/
+
+#ifdef VENDOR_EDIT
+#Liang.Zhang@TECH.Storage.Stability.OPPO_SHUTDOWN_DETECT, 2019/04/28, Add for shutdown detect
+obj-$(CONFIG_OPPO_SHUTDOWN_DETECT)  +=  oppo_shutdown_detect/
+#endif /* VENDOR_EDIT */

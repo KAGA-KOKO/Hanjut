@@ -95,6 +95,10 @@ static struct workqueue_struct *accdet_workqueue;
 /* when  eint issued, queue work: eint_work */
 static struct work_struct eint_work;
 static struct workqueue_struct *eint_workqueue;
+#ifdef CONFIG_HSKEY_BLOCK
+	struct delayed_work hskey_block_work;
+	bool g_hskey_block_flag;
+#endif /* CONFIG_HSKEY_BLOCK */
 
 /* micbias_timer: disable micbias if no accdet irq after eint,
  * timeout: 6 seconds
@@ -700,6 +704,13 @@ static u32 key_check(u32 v)
 
 static void send_key_event(u32 keycode, u32 flag)
 {
+#ifdef CONFIG_HSKEY_BLOCK
+	pr_info("[accdet][send_key_event]g_hskey_block_flag = %d\n", accdet->g_hskey_block_flag);
+	if (accdet->g_hskey_block_flag) {
+		pr_info("[accdet][send_key_event]No key event in 1s after inserting 4-pole headsets\n");
+		return;
+	}
+#endif /* CONFIG_HSKEY_BLOCK */
 	switch (keycode) {
 	case DW_KEY:
 		input_report_key(accdet_input_dev, KEY_VOLUMEDOWN, flag);
@@ -1090,6 +1101,13 @@ static void eint_work_callback(struct work_struct *work)
 	pr_info("accdet %s enable_irq !!\n", __func__);
 #endif
 }
+#ifdef CONFIG_HSKEY_BLOCK
+static void disable_hskey_block_callback(struct work_struct *work)
+{
+	pr_info("[accdet][disable_hskey_block_callback]:\n");
+	accdet->g_hskey_block_flag = false;
+}
+#endif /* CONFIG_HSKEY_BLOCK */
 
 static void accdet_set_debounce(int state, unsigned int debounce)
 {
@@ -1318,8 +1336,15 @@ static int pmic_eint_queue_work(int eintID)
 				jiffies + MICBIAS_DISABLE_TIMER);
 		}
 		ret = queue_work(eint_workqueue, &eint_work);
+#ifdef CONFIG_HSKEY_BLOCK
+				accdet->g_hskey_block_flag = true;
+				schedule_delayed_work(&accdet->hskey_block_work, msecs_to_jiffies(1500));
+#endif /* CONFIG_HSKEY_BLOCK */
 	} else
 		pr_info("%s invalid EINT ID!\n", __func__);
+#ifdef CONFIG_HSKEY_BLOCK
+				cancel_delayed_work_sync(&accdet->hskey_block_work);
+#endif /* CONFIG_HSKEY_BLOCK */
 
 #elif defined CONFIG_ACCDET_SUPPORT_EINT1
 	if (eintID == PMIC_EINT1) {
@@ -2076,6 +2101,9 @@ int mt_accdet_probe(struct platform_device *dev)
 		pr_notice("%s create eint workqueue fail.\n", __func__);
 		goto err_create_workqueue;
 	}
+#ifdef CONFIG_HSKEY_BLOCK
+	INIT_DELAYED_WORK(&accdet->hskey_block_work, disable_hskey_block_callback);
+#endif /* CONFIG_HSKEY_BLOCK */
 
 #ifdef CONFIG_ACCDET_EINT
 	ret = ext_eint_setup(dev);
