@@ -216,11 +216,11 @@ static int alarm_set_rtc(struct timespec *ts)
 	int rv = 0;
 
 	rtc_time_to_tm(ts->tv_sec, &new_rtc_tm);
-	//pr_notice("set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n",
+	/*pr_notice("set rtc %ld %ld - rtc %02d:%02d:%02d %02d/%02d/%04d\n",
 		  ts->tv_sec, ts->tv_nsec,
 		  new_rtc_tm.tm_hour, new_rtc_tm.tm_min,
 		  new_rtc_tm.tm_sec, new_rtc_tm.tm_mon + 1,
-		  new_rtc_tm.tm_mday, new_rtc_tm.tm_year + 1900);
+		  new_rtc_tm.tm_mday, new_rtc_tm.tm_year + 1900);*/
 	rtc_dev = alarmtimer_get_rtcdev();
 	rv = do_settimeofday(ts);
 	if (rv < 0)
