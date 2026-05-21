@@ -135,4 +135,3 @@ module_exit(netlink_kevent_exit);
 MODULE_LICENSE("GPL");
 
 #endif /* CONFIG_OPPO_KEVENT_UPLOAD */
-
